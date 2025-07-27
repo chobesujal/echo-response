@@ -70,13 +70,18 @@ export const ChatContainer = () => {
       if (typeof response === 'string') {
         responseText = response;
       } else if (response && typeof response === 'object') {
-        // Handle various possible response formats
-        responseText = response.text || 
-                     response.content || 
-                     response.message || 
-                     response.data || 
-                     response.choices?.[0]?.message?.content ||
-                     (typeof response.toString === 'function' ? response.toString() : JSON.stringify(response));
+        // Handle Puter's specific response format: response.message.content[0].text
+        if (response.message?.content?.[0]?.text) {
+          responseText = response.message.content[0].text;
+        } else {
+          // Fallback to other possible formats
+          responseText = response.text || 
+                       response.content || 
+                       response.message || 
+                       response.data || 
+                       response.choices?.[0]?.message?.content ||
+                       'No response received.';
+        }
       } else if (response === null || response === undefined) {
         responseText = 'No response received.';
       } else {
