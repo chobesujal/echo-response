@@ -80,8 +80,10 @@ export const ChatContainer = () => {
       if (typeof response === 'string') {
         responseText = response;
       } else if (response && typeof response === 'object') {
-        // Handle Puter's specific response format: response.message.content[0].text
-        if (response.message?.content?.[0]?.text) {
+        // Handle different Puter response formats
+        if (response.message?.content) {
+          responseText = response.message.content;
+        } else if (response.message?.content?.[0]?.text) {
           responseText = response.message.content[0].text;
         } else {
           // Fallback to other possible formats
