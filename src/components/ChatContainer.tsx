@@ -16,7 +16,7 @@ interface Message {
   timestamp: Date;
 }
 
-type Model = 'claude-sonnet-4-20250514' | 'claude-opus-4-20250514';
+type Model = 'claude-3-5-haiku-20241022' | 'claude-3-5-sonnet-20241022';
 
 export const ChatContainer = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -28,7 +28,7 @@ export const ChatContainer = () => {
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model>('claude-sonnet-4-20250514');
+  const [selectedModel, setSelectedModel] = useState<Model>('claude-3-5-haiku-20241022');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -57,10 +57,20 @@ export const ChatContainer = () => {
     setIsTyping(true);
 
     try {
-      // Use Puter AI API
+      // Use Puter AI API with cost optimization
       console.log('Sending message to Puter:', text);
+      
+      // Only send the last 5 messages to reduce token usage
+      const recentMessages = messages.slice(-5);
+      const contextMessages = recentMessages.map(msg => ({
+        role: msg.isUser ? 'user' : 'assistant',
+        content: msg.text
+      }));
+      
       const response = await (window as any).puter.ai.chat(text, {
-        model: selectedModel
+        model: selectedModel,
+        context: contextMessages,
+        max_tokens: 500 // Limit response length to reduce costs
       });
       
       console.log('Puter response:', response, 'Type:', typeof response);
@@ -130,8 +140,8 @@ export const ChatContainer = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="claude-sonnet-4-20250514">Claude 4 Sonnet</SelectItem>
-              <SelectItem value="claude-opus-4-20250514">Claude 4 Opus</SelectItem>
+              <SelectItem value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast & Cheap)</SelectItem>
+              <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Balanced)</SelectItem>
             </SelectContent>
           </Select>
         </div>
