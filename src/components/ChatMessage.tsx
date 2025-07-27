@@ -14,6 +14,9 @@ interface ChatMessageProps {
 
 export const ChatMessage = ({ message, isUser, timestamp }: ChatMessageProps) => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  
+  // Ensure message is always a string for ReactMarkdown
+  const safeMessage = typeof message === 'string' ? message : String(message || 'Invalid message format');
 
   const copyToClipboard = async (code: string) => {
     try {
@@ -37,7 +40,7 @@ export const ChatMessage = ({ message, isUser, timestamp }: ChatMessageProps) =>
           : "bg-ai-message text-ai-message-foreground mr-12"
       )}>
         {isUser ? (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{safeMessage}</p>
         ) : (
           <div className="text-sm leading-relaxed prose prose-sm max-w-none">
             <ReactMarkdown 
@@ -82,7 +85,7 @@ export const ChatMessage = ({ message, isUser, timestamp }: ChatMessageProps) =>
                 pre: ({children}) => <div>{children}</div>
               }}
             >
-              {message}
+              {safeMessage}
             </ReactMarkdown>
           </div>
         )}

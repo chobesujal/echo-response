@@ -58,19 +58,32 @@ export const ChatContainer = () => {
 
     try {
       // Use Puter AI API
+      console.log('Sending message to Puter:', text);
       const response = await (window as any).puter.ai.chat(text, {
         model: selectedModel
       });
       
-      // Ensure we extract text from response object
+      console.log('Puter response:', response, 'Type:', typeof response);
+      
+      // Ensure we extract text from response object and always get a string
       let responseText = '';
       if (typeof response === 'string') {
         responseText = response;
       } else if (response && typeof response === 'object') {
-        responseText = response.text || response.content || response.message || JSON.stringify(response);
-      } else {
+        // Handle various possible response formats
+        responseText = response.text || 
+                     response.content || 
+                     response.message || 
+                     response.data || 
+                     response.choices?.[0]?.message?.content ||
+                     (typeof response.toString === 'function' ? response.toString() : JSON.stringify(response));
+      } else if (response === null || response === undefined) {
         responseText = 'No response received.';
+      } else {
+        responseText = String(response);
       }
+      
+      console.log('Final response text:', responseText, 'Type:', typeof responseText);
       
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
