@@ -16,7 +16,7 @@ interface Message {
   timestamp: Date;
 }
 
-type Model = 'claude-3-5-haiku-20241022' | 'claude-3-5-sonnet-20241022';
+type Model = 'deepseek-r1' | 'deepseek-v3' | 'gemini-2.0-flash';
 
 export const ChatContainer = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -28,7 +28,7 @@ export const ChatContainer = () => {
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model>('claude-3-5-haiku-20241022');
+  const [selectedModel, setSelectedModel] = useState<Model>('deepseek-r1');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -140,8 +140,9 @@ export const ChatContainer = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast & Cheap)</SelectItem>
-              <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Balanced)</SelectItem>
+              <SelectItem value="deepseek-r1">DeepSeek R1</SelectItem>
+              <SelectItem value="deepseek-v3">DeepSeek V3</SelectItem>
+              <SelectItem value="gemini-2.0-flash">Gemini 2.0 Flash</SelectItem>
             </SelectContent>
           </Select>
         </div>
