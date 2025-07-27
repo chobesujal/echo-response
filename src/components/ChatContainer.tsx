@@ -62,9 +62,19 @@ export const ChatContainer = () => {
         model: selectedModel
       });
       
+      // Ensure we extract text from response object
+      let responseText = '';
+      if (typeof response === 'string') {
+        responseText = response;
+      } else if (response && typeof response === 'object') {
+        responseText = response.text || response.content || response.message || JSON.stringify(response);
+      } else {
+        responseText = 'No response received.';
+      }
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: response || 'No response received.',
+        text: responseText,
         isUser: false,
         timestamp: new Date()
       };
