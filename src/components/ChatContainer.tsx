@@ -16,7 +16,7 @@ interface Message {
   timestamp: Date;
 }
 
-type Model = 'gpt-3.5-turbo' | 'gpt-4' | 'gpt-4-turbo';
+type Model = 'claude-sonnet-4-20250514' | 'claude-opus-4-20250514';
 
 export const ChatContainer = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -28,8 +28,7 @@ export const ChatContainer = () => {
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model>('gpt-3.5-turbo');
-  const [apiKey, setApiKey] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<Model>('claude-sonnet-4-20250514');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -58,59 +57,21 @@ export const ChatContainer = () => {
     setIsTyping(true);
 
     try {
-      if (!apiKey) {
-        // Fallback to mock response if no API key
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-        
-        const aiResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          text: generateMockResponse(text),
-          isUser: false,
-          timestamp: new Date()
-        };
-
-        setMessages(prev => [...prev, aiResponse]);
-        return;
-      }
-
-      // Real OpenAI API call
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [
-            ...messages
-              .filter(msg => !msg.text.includes('*This is a demo response*'))
-              .map(msg => ({
-                role: msg.isUser ? 'user' : 'assistant',
-                content: msg.text
-              })),
-            { role: 'user', content: text }
-          ],
-          temperature: 0.7,
-          max_tokens: 1000
-        })
+      // Use Puter AI API
+      const response = await (window as any).puter.ai.chat(text, {
+        model: selectedModel
       });
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
-      }
-
-      const data = await response.json();
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.choices[0]?.message?.content || 'No response received.',
+        text: response || 'No response received.',
         isUser: false,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
-      console.error('API Error:', error);
+      console.error('Puter AI Error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to get AI response. Please try again.",
@@ -121,18 +82,6 @@ export const ChatContainer = () => {
     }
   };
 
-  const generateMockResponse = (userText: string): string => {
-    const responses = [
-      "That's an interesting question! Let me think about that...",
-      "I understand what you're asking. Here's my perspective:",
-      "Great question! Based on what you've mentioned:",
-      "I'd be happy to help with that. Here's what I think:",
-      "Thank you for asking! Let me provide some insights:"
-    ];
-    
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-    return `${randomResponse}\n\nYour message was: "${userText}"\n\n*This is a demo response. Add your OpenAI API key to get real AI responses.*`;
-  };
 
   const clearChat = () => {
     setMessages([{
@@ -153,9 +102,8 @@ export const ChatContainer = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-              <SelectItem value="gpt-4">GPT-4</SelectItem>
-              <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+              <SelectItem value="claude-sonnet-4-20250514">Claude 4 Sonnet</SelectItem>
+              <SelectItem value="claude-opus-4-20250514">Claude 4 Opus</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -188,21 +136,6 @@ export const ChatContainer = () => {
         </div>
       </ScrollArea>
 
-      <div className="p-4 border-t border-border bg-card">
-        <div className="flex items-center gap-2 mb-2">
-          <Settings className="w-4 h-4 text-muted-foreground" />
-          <input
-            type="password"
-            placeholder="Enter OpenAI API Key (optional)"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            className="flex-1 px-3 py-1 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-        <p className="text-xs text-muted-foreground mb-2">
-          {apiKey ? `Using ${selectedModel} with your API key` : 'Demo mode - Add API key for real responses'}
-        </p>
-      </div>
       <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
     </Card>
   );
