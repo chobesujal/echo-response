@@ -185,15 +185,25 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
 
       let response;
       
-      // Use Puter for DeepSeek and Gemini models with optimized settings
+      // Use Puter for DeepSeek and Gemini models with error handling
       if (selectedModel.startsWith('deepseek') || selectedModel === 'gemini-2.0-flash') {
-        response = await (window as any).puter.ai.chat(text, {
-          model: selectedModel,
-          context: contextMessages,
-          max_tokens: 4000,
-          temperature: selectedModel.includes('reasoner') ? 0.3 : 0.7,
-          stream: true
-        });
+        try {
+          // Check if Puter is available
+          if (!(window as any).puter?.ai?.chat) {
+            throw new Error('Puter AI service not available');
+          }
+          
+          response = await (window as any).puter.ai.chat(text, {
+            model: selectedModel,
+            context: contextMessages,
+            max_tokens: 4000,
+            temperature: selectedModel.includes('reasoner') ? 0.3 : 0.7,
+            stream: false // Disable streaming for now to fix response issues
+          });
+        } catch (puterError) {
+          console.log('Puter error, falling back to simulation:', puterError);
+          response = await simulateAdvancedResponse(text, selectedModel, contextMessages);
+        }
       } else {
         // Enhanced simulation for other models
         response = await simulateAdvancedResponse(text, selectedModel, contextMessages);
@@ -221,7 +231,14 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: `I apologize, but I encountered an error with the ${modelDisplayNames[selectedModel]} model. This might be due to:\n\n• Model temporarily unavailable\n• Network connectivity issues\n• API rate limits\n\nPlease try again or select a different model.`,
+        text: `I apologize, but I encountered an error. Please try again or switch to a different model.
+
+**Error details**: ${error instanceof Error ? error.message : 'Unknown error'}
+
+**Troubleshooting tips**:
+• Check your internet connection
+• Try switching to DeepSeek or Gemini models
+• Refresh the page if the issue persists`,
         isUser: false,
         timestamp: new Date(),
         model: 'error'
@@ -236,7 +253,6 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
         variant: "destructive"
       });
     } finally {
-      setIsTyping(false);
       setIsStreaming(false);
       setStreamingText("");
     }

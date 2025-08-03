@@ -176,36 +176,34 @@ export function AppSidebar({
             <SidebarMenu>
               {chatHistory.slice(0, 10).map((chat) => (
                 <SidebarMenuItem key={chat.id}>
-                  <SidebarMenuButton 
-                    onClick={() => onLoadChat(chat.id)}
-                    className={`group w-full justify-between ${
-                      currentChatId === chat.id ? 'bg-sidebar-accent' : ''
-                    }`}
-                  >
-                    <div className="flex items-center min-w-0 flex-1">
-                      <MessageSquare className="mr-2 h-4 w-4 shrink-0" />
-                      {!collapsed && (
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium">
-                            {chat.title}
+                  <div className={`group relative w-full ${currentChatId === chat.id ? 'bg-sidebar-accent rounded-md' : ''}`}>
+                    <SidebarMenuButton 
+                      onClick={() => onLoadChat(chat.id)}
+                      className="w-full justify-start pr-8"
+                    >
+                      <div className="flex items-center min-w-0 flex-1">
+                        <MessageSquare className="mr-2 h-4 w-4 shrink-0" />
+                        {!collapsed && (
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium">
+                              {chat.title}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {chat.messageCount} messages
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {chat.messageCount} messages
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    </SidebarMenuButton>
                     {!collapsed && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
                         onClick={(e) => handleDeleteChat(chat.id, e)}
-                        className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 h-6 w-6 rounded hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-opacity"
                       >
                         <Trash2 className="h-3 w-3" />
-                      </Button>
+                      </button>
                     )}
-                  </SidebarMenuButton>
+                  </div>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
