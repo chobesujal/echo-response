@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { MessageSquare, Plus, Settings, Trash2, Moon, Sun, Download, Upload } from "lucide-react";
+import { UserMenu } from "./UserMenu";
 import {
   Sidebar,
   SidebarContent,
@@ -210,28 +211,19 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Settings and Actions */}
+        {/* User Profile and Settings */}
         <SidebarGroup className="mt-auto">
-          <SidebarGroupLabel>Settings</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={onToggleDarkMode}>
-                  {darkMode ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-                  {!collapsed && <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={exportChats}>
-                  <Download className="mr-2 h-4 w-4" />
-                  {!collapsed && <span>Export Chats</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={importChats}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  {!collapsed && <span>Import Chats</span>}
-                </SidebarMenuButton>
+                <div className="flex items-center justify-between w-full p-2">
+                  <UserMenu />
+                  {!collapsed && (
+                    <SidebarMenuButton onClick={onToggleDarkMode} className="ml-auto">
+                      {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    </SidebarMenuButton>
+                  )}
+                </div>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

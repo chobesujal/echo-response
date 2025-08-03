@@ -185,23 +185,44 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
 
       let response;
       
-      // Use Puter for DeepSeek and Gemini models with error handling
+      // Optimized API calls with fallback
       if (selectedModel.startsWith('deepseek') || selectedModel === 'gemini-2.0-flash') {
         try {
-          // Check if Puter is available
-          if (!(window as any).puter?.ai?.chat) {
-            throw new Error('Puter AI service not available');
-          }
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
           
-          response = await (window as any).puter.ai.chat(text, {
-            model: selectedModel,
-            context: contextMessages,
-            max_tokens: 4000,
-            temperature: selectedModel.includes('reasoner') ? 0.3 : 0.7,
-            stream: false // Disable streaming for now to fix response issues
+          // Try Puter API first
+          const puterResponse = await fetch('https://api.puter.com/drivers/call', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_PUTER_TOKEN || 'demo-token'}`
+            },
+            body: JSON.stringify({
+              interface: 'puter-chat-completion',
+              driver: selectedModel.includes('deepseek') ? 'deepseek' : 'gemini',
+              method: 'complete',
+              args: {
+                messages: contextMessages,
+                model: selectedModel,
+                max_tokens: 2000,
+                temperature: selectedModel.includes('reasoner') ? 0.1 : 0.7,
+                stream: false
+              }
+            }),
+            signal: controller.signal
           });
-        } catch (puterError) {
-          console.log('Puter error, falling back to simulation:', puterError);
+
+          clearTimeout(timeoutId);
+
+          if (puterResponse.ok) {
+            const data = await puterResponse.json();
+            response = data.message || data.choices?.[0]?.message?.content || data.text;
+          } else {
+            throw new Error('API request failed');
+          }
+        } catch (error) {
+          console.log('API error, using enhanced simulation:', error);
           response = await simulateAdvancedResponse(text, selectedModel, contextMessages);
         }
       } else {
