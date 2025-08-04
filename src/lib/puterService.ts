@@ -23,6 +23,7 @@ export class PuterService {
   
   async chat(message: string, options: PuterAIOptions = {}): Promise<string> {
     if (!await this.isAvailable()) {
+      console.log('Puter SDK not available, will use fallback');
       throw new Error('Puter SDK not available');
     }
     
@@ -35,6 +36,7 @@ export class PuterService {
     
     try {
       const response = await (window as any).puter.ai.chat(message, defaultOptions);
+      console.log('Raw Puter response:', response);
       return this.extractResponseText(response);
     } catch (error) {
       console.error('Puter AI Error:', error);
@@ -43,6 +45,8 @@ export class PuterService {
   }
   
   private extractResponseText(response: any): string {
+    console.log('Extracting text from response:', response, 'Type:', typeof response);
+    
     if (typeof response === 'string') {
       return response;
     }
@@ -65,7 +69,8 @@ export class PuterService {
         response.data,
         response.choices?.[0]?.message?.content,
         response.response,
-        response.output
+        response.output,
+        response.result
       ];
       
       for (const text of possibleTexts) {
@@ -76,10 +81,18 @@ export class PuterService {
     }
     
     if (response === null || response === undefined) {
-      return 'No response received from AI service.';
+      console.log('Response is null/undefined');
+      throw new Error('No response received from AI service.');
     }
     
-    return String(response) || 'Invalid response format.';
+    const stringResponse = String(response);
+    console.log('Converted to string:', stringResponse);
+    
+    if (!stringResponse || stringResponse === 'undefined' || stringResponse === 'null') {
+      throw new Error('Invalid response format.');
+    }
+    
+    return stringResponse;
   }
   
   getAvailableModels(): string[] {

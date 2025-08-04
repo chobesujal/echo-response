@@ -147,11 +147,8 @@ export function AppSidebar({
 
   return (
     <Sidebar
-      className={collapsed ? "w-14" : "w-64"}
       collapsible="icon"
     >
-      <SidebarTrigger className="m-2 self-end" />
-      
       <SidebarContent>
         {/* New Chat Section */}
         <SidebarGroup>
