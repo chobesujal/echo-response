@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { EnhancedChatContainer } from "./EnhancedChatContainer";
+import { SettingsDialog } from "./SettingsDialog";
 import { Button } from "@/components/ui/button";
 import { Settings, Sparkles } from "lucide-react";
 
 export function Layout() {
   const [currentChatId, setCurrentChatId] = useState<string>();
   const [darkMode, setDarkMode] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     // Load theme preference
@@ -78,7 +80,27 @@ export function Layout() {
           onToggleDarkMode={handleToggleDarkMode}
         />
         
-        <div className="flex-1 flex flex-col h-screen">
+        <div className="flex-1 flex flex-col h-screen relative">
+          {/* Floating Settings Button */}
+          <div className="absolute top-4 right-4 z-10">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setSettingsOpen(true)}
+              className="bg-card/80 backdrop-blur-sm shadow-lg"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+            <SettingsDialog 
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+            />
+          </div>
+          
+          {/* Floating Sidebar Trigger for Mobile */}
+          <div className="absolute top-4 left-4 z-10 lg:hidden">
+            <SidebarTrigger />
+          </div>
           {/* Main Content - Full Screen Chat */}
           <main className="flex-1 overflow-hidden">
             <div className="h-full">

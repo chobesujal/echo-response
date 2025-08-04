@@ -189,8 +189,10 @@ class AIService {
     onComplete: () => void,
     onError: (error: Error) => void
   ): Promise<void> {
+    // Check for API key first
     const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
     if (!apiKey) {
+      // Use enhanced simulation instead
       await this.simulateStreamingResponse(messages, modelId, onChunk, onComplete);
       return;
     }
@@ -217,7 +219,7 @@ class AIService {
 
       await this.processStreamResponse(response, onChunk, onComplete, onError);
     } catch (error) {
-      console.log('DeepSeek API failed, using simulation:', error);
+      console.log('DeepSeek API failed, using enhanced simulation:', error);
       await this.simulateStreamingResponse(messages, modelId, onChunk, onComplete);
     }
   }
@@ -289,15 +291,13 @@ class AIService {
     
     // Simulate realistic typing speed like ChatGPT
     const words = response.split(' ');
-    let currentText = '';
     
     for (let i = 0; i < words.length; i++) {
       const word = words[i] + (i < words.length - 1 ? ' ' : '');
-      currentText += word;
       onChunk(word);
       
-      // Variable delay for more natural typing
-      const delay = Math.random() * 80 + 20; // 20-100ms per word
+      // Variable delay for more natural typing (faster than before)
+      const delay = Math.random() * 50 + 15; // 15-65ms per word
       await new Promise(resolve => setTimeout(resolve, delay));
     }
     
@@ -308,11 +308,14 @@ class AIService {
     const modelName = AI_MODELS.find(m => m.id === modelId)?.name || modelId;
     
     // Analyze prompt for better responses
-    const isCodeRequest = /code|program|function|class|algorithm|debug|syntax|api|javascript|python|react|html|css/i.test(prompt);
-    const isExplanationRequest = /explain|how|what|why|describe|tell me about/i.test(prompt);
-    const isMathRequest = /calculate|math|equation|formula|solve/i.test(prompt);
+    const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening)$/i.test(prompt.trim());
+    const isCodeRequest = /code|program|function|class|algorithm|debug|syntax|api|javascript|python|react|html|css|typescript/i.test(prompt);
+    const isExplanationRequest = /explain|how|what|why|describe|tell me about|define/i.test(prompt);
+    const isMathRequest = /calculate|math|equation|formula|solve|compute/i.test(prompt);
     
-    if (isCodeRequest) {
+    if (isGreeting) {
+      return this.generateGreetingResponse(modelName);
+    } else if (isCodeRequest) {
       return this.generateCodeResponse(prompt, modelName);
     } else if (isExplanationRequest) {
       return this.generateExplanationResponse(prompt, modelName);
@@ -321,6 +324,47 @@ class AIService {
     } else {
       return this.generateGeneralResponse(prompt, modelName);
     }
+  }
+
+  private generateGreetingResponse(modelName: string): string {
+    const greetings = [
+      `Hello! I'm **${modelName}** and I'm excited to help you today! 🚀 
+
+What would you like to work on? I can assist with:
+• **Coding & Development** - Write, debug, or explain code
+• **Creative Writing** - Stories, articles, or content creation  
+• **Problem Solving** - Analysis, planning, and solutions
+• **Learning & Education** - Explanations and tutorials
+• **General Questions** - Anything you're curious about
+
+Just ask me anything, and let's get started!`,
+
+      `Hi there! 👋 Welcome to **${modelName}**!
+
+I'm here to be your AI companion for whatever you need help with. Whether you're:
+
+🔧 **Building something** - I love helping with code, architecture, and technical challenges
+📝 **Writing content** - From creative stories to professional documents  
+🧠 **Learning new things** - I can explain complex topics in simple terms
+💡 **Brainstorming ideas** - Let's think through problems together
+
+What's on your mind today?`,
+
+      `Hey! Great to meet you! ✨
+
+I'm **${modelName}**, your AI assistant ready to dive into whatever project or question you have. 
+
+**Quick capabilities overview:**
+• Code in 20+ programming languages
+• Explain complex concepts clearly
+• Help with creative and technical writing
+• Solve problems step-by-step
+• Provide research and analysis
+
+What would you like to explore together?`
+    ];
+    
+    return greetings[Math.floor(Math.random() * greetings.length)];
   }
 
   private generateCodeResponse(prompt: string, modelName: string): string {
