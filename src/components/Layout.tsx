@@ -81,25 +81,6 @@ export function Layout() {
         />
         
         <div className="flex-1 flex flex-col h-screen relative">
-          {/* Sidebar Trigger */}
-          <div className="flex items-center p-4 border-b border-sidebar-border bg-card/50 backdrop-blur-sm">
-            <SidebarTrigger />
-            <div className="flex items-center gap-2 ml-4">
-              <Sparkles className="w-5 h-5 text-primary animate-pulse-glow" />
-              <h1 className="text-lg font-semibold">Cosmic AI Chat</h1>
-            </div>
-          </div>
-          
-          {/* Main Content - Full Screen Chat */}
-          <main className="flex-1 overflow-hidden">
-            <div className="h-full">
-              <EnhancedChatContainer 
-                currentChatId={currentChatId}
-                onChatUpdate={handleChatUpdate}
-              />
-            </div>
-          </main>
-          
           {/* Floating Settings Button */}
           <div className="absolute top-4 right-4 z-10">
             <Button 
@@ -115,6 +96,20 @@ export function Layout() {
               onOpenChange={setSettingsOpen}
             />
           </div>
+          
+          {/* Floating Sidebar Trigger for Mobile */}
+          <div className="absolute top-4 left-4 z-10 lg:hidden">
+            <SidebarTrigger />
+          </div>
+          {/* Main Content - Full Screen Chat */}
+          <main className="flex-1 overflow-hidden">
+            <div className="h-full">
+              <EnhancedChatContainer 
+                currentChatId={currentChatId}
+                onChatUpdate={handleChatUpdate}
+              />
+            </div>
+          </main>
         </div>
       </div>
     </SidebarProvider>

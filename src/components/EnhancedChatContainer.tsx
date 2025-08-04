@@ -171,40 +171,45 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
 
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
-    setIsTyping(true);
+    setIsStreaming(true);
+    setStreamingText("");
 
     try {
-      let responseText = "";
-
-      // Try Puter AI first
-      try {
-        if (typeof (window as any).puter !== 'undefined' && (window as any).puter.ai) {
-          console.log('Using Puter AI...');
-          
-          const recentMessages = updatedMessages.slice(-5).filter(msg => msg.id !== 'welcome');
-          const contextMessages = recentMessages.map(msg => ({
-            role: msg.isUser ? 'user' : 'assistant',
-            content: msg.text
-          }));
-          
-          const puterModel = mapToPuterModel(selectedModel);
-          
-          const response = await (window as any).puter.ai.chat(text, {
-            model: puterModel,
-            context: contextMessages,
-            max_tokens: 1000,
-            temperature: selectedModel.includes('reasoner') ? 0.1 : 0.7
-          });
-          
-          responseText = extractResponseText(response);
-          console.log('Puter response received:', responseText);
-        } else {
-          throw new Error('Puter not available');
-        }
-      } catch (puterError) {
-        console.log('Puter failed, using fallback:', puterError);
-        responseText = await simulateAdvancedResponse(text, selectedModel, []);
+      // Use Puter AI API
+      console.log('Sending message to Puter:', text);
+      
+      // Prepare context messages for better responses
+      const recentMessages = updatedMessages.slice(-5).filter(msg => msg.id !== 'welcome');
+      const contextMessages = recentMessages.map(msg => ({
+        role: msg.isUser ? 'user' : 'assistant',
+        content: msg.text
+      }));
+      
+      // Map our model names to Puter-compatible models
+      const puterModel = mapToPuterModel(selectedModel);
+      
+      let fullResponse = "";
+      
+      // Check if Puter is available
+      if (typeof (window as any).puter === 'undefined') {
+        throw new Error('Puter SDK not loaded');
       }
+      
+      // Use Puter AI with streaming-like behavior
+      const response = await (window as any).puter.ai.chat(text, {
+        model: puterModel,
+        context: contextMessages,
+        max_tokens: 1000,
+        temperature: selectedModel.includes('reasoner') ? 0.1 : 0.7
+      });
+      
+      console.log('Puter response:', response, 'Type:', typeof response);
+      
+      // Extract text from response
+      let responseText = extractResponseText(response);
+      
+      // Simulate streaming for better UX
+      await streamResponseRealTime(responseText);
       
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -217,16 +222,35 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       const finalMessages = [...updatedMessages, aiResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
+      setIsStreaming(false);
+      setStreamingText("");
       
     } catch (error) {
       console.error('Puter AI Error:', error);
+      
+      // Fallback to enhanced simulation
+      const fallbackResponse = await simulateAdvancedResponse(text, selectedModel, []);
+      await streamResponseRealTime(fallbackResponse);
+      
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: fallbackResponse,
+        isUser: false,
+        timestamp: new Date(),
+        model: selectedModel
+      };
+
+      const finalMessages = [...updatedMessages, aiResponse];
+      setMessages(finalMessages);
+      saveChat(finalMessages);
+      setIsStreaming(false);
+      setStreamingText("");
+      
       toast({
-        title: "Error",
-        description: "Failed to get AI response. Please try again.",
-        variant: "destructive"
+        title: "Using Fallback Mode",
+        description: "Puter AI unavailable, using enhanced simulation.",
+        variant: "default"
       });
-    } finally {
-      setIsTyping(false);
     }
   };
   
@@ -267,8 +291,8 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
   };
 
   const simulateAdvancedResponse = async (prompt: string, model: string, context: any[]): Promise<string> => {
-    // Quick response for better UX
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Reduced delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 700));
     
     // Analyze prompt for code-related requests
     const isCodeRequest = /code|program|function|class|algorithm|debug|syntax|api|javascript|python|react|html|css/i.test(prompt);
@@ -446,6 +470,14 @@ How would you like to proceed with this?`
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
+  const streamResponseRealTime = async (text: string) => {
+    const chars = text.split('');
+    for (let i = 0; i < chars.length; i++) {
+      setStreamingText(chars.slice(0, i + 1).join(''));
+      await new Promise(resolve => setTimeout(resolve, 20 + Math.random() * 40));
+    }
+  };
+
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
@@ -455,6 +487,7 @@ How would you like to proceed with this?`
       model: 'system'
     };
     setMessages([welcomeMessage]);
+    setStreamingText("");
   };
 
   const regenerateLastResponse = async () => {
@@ -572,7 +605,7 @@ How would you like to proceed with this?`
             variant="ghost" 
             size="sm" 
             onClick={regenerateLastResponse}
-            disabled={isTyping || messages.filter(m => m.isUser).length === 0}
+            disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
             className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
           >
             <RefreshCw className="w-4 h-4" />
@@ -626,12 +659,23 @@ How would you like to proceed with this?`
               model={message.model}
             />
           ))}
-          {isTyping && <TypingIndicator />}
+          {isTyping && !isStreaming && <TypingIndicator />}
+          {isStreaming && streamingText && (
+            <div className="animate-fade-in">
+              <ChatMessage
+                message={streamingText}
+                isUser={false}
+                timestamp={new Date()}
+                model={selectedModel}
+                isStreaming={true}
+              />
+            </div>
+          )}
         </div>
       </ScrollArea>
 
       <div className="p-4 bg-sidebar/30 backdrop-blur-sm border-t border-sidebar-border">
-        <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
+        <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
       </div>
     </div>
   );
