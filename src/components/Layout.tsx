@@ -78,30 +78,10 @@ export function Layout() {
           onToggleDarkMode={handleToggleDarkMode}
         />
         
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="h-14 flex items-center justify-between px-6 border-b border-border bg-card/50 backdrop-blur-sm">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="lg:hidden" />
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-6 h-6 text-primary" />
-                <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                  AI Chat Studio
-                </h1>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm">
-                <Settings className="w-4 h-4" />
-                <span className="ml-2 hidden sm:inline">Settings</span>
-              </Button>
-            </div>
-          </header>
-          
-          {/* Main Content */}
-          <main className="flex-1 p-4 overflow-hidden">
-            <div className="h-full max-w-6xl mx-auto">
+        <div className="flex-1 flex flex-col h-screen">
+          {/* Main Content - Full Screen Chat */}
+          <main className="flex-1 overflow-hidden">
+            <div className="h-full">
               <EnhancedChatContainer 
                 currentChatId={currentChatId}
                 onChatUpdate={handleChatUpdate}

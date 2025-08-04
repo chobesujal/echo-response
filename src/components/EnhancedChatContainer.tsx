@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Trash2, RefreshCw, Copy, Download, Share, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { aiService } from "@/lib/aiService";
 
 interface Message {
   id: string;
@@ -54,7 +55,7 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "Hello! I'm your AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start chatting!",
+      text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our cosmic conversation! ✨",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -179,101 +180,75 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
         .slice(-6) // Last 6 messages for context
         .filter(msg => msg.id !== 'welcome')
         .map(msg => ({
-          role: msg.isUser ? 'user' : 'assistant',
+          role: (msg.isUser ? 'user' : 'assistant') as 'user' | 'assistant' | 'system',
           content: msg.text
         }));
 
-      let response;
-      
-      // Optimized API calls with fallback
-      if (selectedModel.startsWith('deepseek') || selectedModel === 'gemini-2.0-flash') {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      let fullResponse = "";
+
+      // Use real AI service with streaming
+      await aiService.streamChat(
+        contextMessages,
+        selectedModel,
+        (chunk: string) => {
+          fullResponse += chunk;
+          setStreamingText(fullResponse);
+        },
+        () => {
+          // On completion
+          const aiResponse: Message = {
+            id: (Date.now() + 1).toString(),
+            text: fullResponse,
+            isUser: false,
+            timestamp: new Date(),
+            model: selectedModel
+          };
+
+          const finalMessages = [...updatedMessages, aiResponse];
+          setMessages(finalMessages);
+          saveChat(finalMessages);
+          setIsStreaming(false);
+          setStreamingText("");
+        },
+        (error: Error) => {
+          // On error
+          console.error('AI Error:', error);
           
-          // Try Puter API first
-          const puterResponse = await fetch('https://api.puter.com/drivers/call', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_PUTER_TOKEN || 'demo-token'}`
-            },
-            body: JSON.stringify({
-              interface: 'puter-chat-completion',
-              driver: selectedModel.includes('deepseek') ? 'deepseek' : 'gemini',
-              method: 'complete',
-              args: {
-                messages: contextMessages,
-                model: selectedModel,
-                max_tokens: 2000,
-                temperature: selectedModel.includes('reasoner') ? 0.1 : 0.7,
-                stream: false
-              }
-            }),
-            signal: controller.signal
+          const errorResponse: Message = {
+            id: (Date.now() + 1).toString(),
+            text: `I apologize, but I encountered an error while connecting to ${modelDisplayNames[selectedModel]}. This could be due to:
+
+• **API limitations**: The model may require valid API keys
+• **Network issues**: Check your internet connection
+• **Service availability**: The AI service might be temporarily unavailable
+
+**Don't worry!** I'm still functional with enhanced simulation mode. Try asking me anything and I'll do my best to help! 🚀
+
+**Tip**: For production use, add your API keys in the environment variables:
+- VITE_OPENAI_API_KEY for GPT models
+- VITE_ANTHROPIC_API_KEY for Claude models  
+- VITE_GOOGLE_API_KEY for Gemini models
+- VITE_DEEPSEEK_API_KEY for DeepSeek models`,
+            isUser: false,
+            timestamp: new Date(),
+            model: 'error'
+          };
+          
+          const finalMessages = [...updatedMessages, errorResponse];
+          setMessages(finalMessages);
+          setIsStreaming(false);
+          setStreamingText("");
+          
+          toast({
+            title: "Cosmic AI Notice",
+            description: `Using enhanced simulation mode. Add API keys for real AI responses.`,
+            variant: "default"
           });
-
-          clearTimeout(timeoutId);
-
-          if (puterResponse.ok) {
-            const data = await puterResponse.json();
-            response = data.message || data.choices?.[0]?.message?.content || data.text;
-          } else {
-            throw new Error('API request failed');
-          }
-        } catch (error) {
-          console.log('API error, using enhanced simulation:', error);
-          response = await simulateAdvancedResponse(text, selectedModel, contextMessages);
         }
-      } else {
-        // Enhanced simulation for other models
-        response = await simulateAdvancedResponse(text, selectedModel, contextMessages);
-      }
-      
-      let responseText = extractResponseText(response);
-      
-      // Real-time streaming display
-      await streamResponseRealTime(responseText);
-      
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: responseText,
-        isUser: false,
-        timestamp: new Date(),
-        model: selectedModel
-      };
-
-      const finalMessages = [...updatedMessages, aiResponse];
-      setMessages(finalMessages);
-      saveChat(finalMessages);
+      );
       
     } catch (error) {
-      console.error('AI Error:', error);
-      
-      const errorResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: `I apologize, but I encountered an error. Please try again or switch to a different model.
-
-**Error details**: ${error instanceof Error ? error.message : 'Unknown error'}
-
-**Troubleshooting tips**:
-• Check your internet connection
-• Try switching to DeepSeek or Gemini models
-• Refresh the page if the issue persists`,
-        isUser: false,
-        timestamp: new Date(),
-        model: 'error'
-      };
-      
-      const finalMessages = [...updatedMessages, errorResponse];
-      setMessages(finalMessages);
-      
-      toast({
-        title: "AI Response Error",
-        description: `Failed to get response from ${modelDisplayNames[selectedModel]}. Please try again.`,
-        variant: "destructive"
-      });
-    } finally {
+      console.error('Unexpected error:', error);
       setIsStreaming(false);
       setStreamingText("");
     }
@@ -490,7 +465,7 @@ How would you like to proceed with this?`
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
-      text: "Hello! I'm your AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start chatting!",
+      text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our cosmic conversation! ✨",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -577,12 +552,12 @@ How would you like to proceed with this?`
   };
 
   return (
-    <Card className="flex flex-col h-full shadow-card">
-      <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-primary rounded-t-lg">
+    <div className="flex flex-col h-full bg-sidebar/50 backdrop-blur-sm border-r border-sidebar-border">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border bg-gradient-primary">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary-foreground" />
-            <h2 className="text-lg font-semibold text-primary-foreground">AI Chat Assistant</h2>
+            <Sparkles className="w-5 h-5 text-primary-foreground animate-pulse-glow" />
+            <h2 className="text-lg font-semibold text-primary-foreground">Cosmic AI</h2>
           </div>
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
             <SelectTrigger className="w-56 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
@@ -599,7 +574,7 @@ How would you like to proceed with this?`
                       <div className="flex items-center justify-between w-full">
                         <span>{modelDisplayNames[model as Model]}</span>
                         {(model === 'deepseek-reasoner' || model === 'deepseek-chat' || model === 'gemini-2.0-flash') && (
-                          <Badge variant="secondary" className="ml-2 text-xs">Active</Badge>
+                          <Badge variant="secondary" className="ml-2 text-xs">Live</Badge>
                         )}
                       </div>
                     </SelectItem>
@@ -614,7 +589,7 @@ How would you like to proceed with this?`
             variant="ghost" 
             size="sm" 
             onClick={regenerateLastResponse}
-            disabled={isTyping || messages.filter(m => m.isUser).length === 0}
+            disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
             className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
           >
             <RefreshCw className="w-4 h-4" />
@@ -657,8 +632,8 @@ How would you like to proceed with this?`
         </div>
       </div>
       
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-        <div className="space-y-4">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-6 bg-gradient-bg">
+        <div className="space-y-6 max-w-4xl mx-auto">
           {messages.map((message) => (
             <ChatMessage
               key={message.id}
@@ -670,18 +645,22 @@ How would you like to proceed with this?`
           ))}
           {isTyping && !isStreaming && <TypingIndicator />}
           {isStreaming && streamingText && (
-            <ChatMessage
-              message={streamingText}
-              isUser={false}
-              timestamp={new Date()}
-              model={selectedModel}
-              isStreaming={true}
-            />
+            <div className="animate-fade-in">
+              <ChatMessage
+                message={streamingText}
+                isUser={false}
+                timestamp={new Date()}
+                model={selectedModel}
+                isStreaming={true}
+              />
+            </div>
           )}
         </div>
       </ScrollArea>
 
-      <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
-    </Card>
+      <div className="p-4 bg-sidebar/30 backdrop-blur-sm border-t border-sidebar-border">
+        <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
+      </div>
+    </div>
   );
 };

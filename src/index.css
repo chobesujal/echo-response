@@ -109,25 +109,25 @@ All colors MUST be HSL.
     --ai-message-foreground: 210 40% 98%;
     
     /* Gradients - dark mode */
-    --gradient-bg: linear-gradient(135deg, hsl(222.2 84% 4.9%) 0%, hsl(220 30% 8%) 100%);
-    --gradient-primary: linear-gradient(135deg, hsl(250 85% 60%) 0%, hsl(260 85% 65%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(217.2 32.6% 17.5%) 0%, hsl(220 25% 20%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(217.2 32.6% 17.5%) 0%, hsl(225 30% 22%) 100%);
+    --gradient-bg: linear-gradient(135deg, hsl(220 15% 8%) 0%, hsl(220 20% 12%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(260 85% 65%) 0%, hsl(280 90% 70%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(220 15% 15%) 0%, hsl(220 20% 18%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(220 15% 15%) 0%, hsl(225 20% 20%) 100%);
     
     /* Shadows - dark mode */
-    --shadow-message: 0 2px 8px hsl(0 0% 0% / 0.3);
-    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.4);
-    --shadow-elegant: 0 10px 30px -10px hsl(250 85% 60% / 0.4);
-    --shadow-glow: 0 0 40px hsl(250 85% 65% / 0.5);
+    --shadow-message: 0 2px 8px hsl(0 0% 0% / 0.4);
+    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.5);
+    --shadow-elegant: 0 10px 30px -10px hsl(260 85% 65% / 0.4);
+    --shadow-glow: 0 0 40px hsl(260 85% 70% / 0.5);
 
-    --sidebar-background: 240 5.9% 10%;
+    --sidebar-background: 220 15% 8%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary: 260 85% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 220 15% 12%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 220 15% 15%;
+    --sidebar-ring: 260 85% 65%;
   }
 }
 

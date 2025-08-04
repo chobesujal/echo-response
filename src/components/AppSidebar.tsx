@@ -163,7 +163,7 @@ export function AppSidebar({
                   className="w-full bg-gradient-primary text-primary-foreground hover:opacity-90"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  {!collapsed && <span>New Chat</span>}
+                  {!collapsed && <span>New Conversation</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -172,7 +172,7 @@ export function AppSidebar({
 
         {/* Chat History */}
         <SidebarGroup>
-          <SidebarGroupLabel>Recent Chats</SidebarGroupLabel>
+          <SidebarGroupLabel>Recent Conversations</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {chatHistory.slice(0, 10).map((chat) => (
