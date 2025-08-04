@@ -57,48 +57,35 @@ export const ChatContainer = () => {
     setIsTyping(true);
 
     try {
-      // Use Puter AI API with cost optimization
+      // Use Puter AI API
       console.log('Sending message to Puter:', text);
       
-      // Only send the last 5 messages to reduce token usage
+      // Prepare context messages
       const recentMessages = messages.slice(-5);
       const contextMessages = recentMessages.map(msg => ({
         role: msg.isUser ? 'user' : 'assistant',
         content: msg.text
       }));
       
+      // Map model name to Puter-compatible format
+      const puterModel = mapToPuterModel(selectedModel);
+      
+      // Check if Puter is available
+      if (typeof (window as any).puter === 'undefined') {
+        throw new Error('Puter SDK not loaded');
+      }
+      
       const response = await (window as any).puter.ai.chat(text, {
-        model: selectedModel,
+        model: puterModel,
         context: contextMessages,
-        max_tokens: 500 // Limit response length to reduce costs
+        max_tokens: 500,
+        temperature: 0.7
       });
       
       console.log('Puter response:', response, 'Type:', typeof response);
       
-      // Ensure we extract text from response object and always get a string
-      let responseText = '';
-      if (typeof response === 'string') {
-        responseText = response;
-      } else if (response && typeof response === 'object') {
-        // Handle different Puter response formats
-        if (response.message?.content) {
-          responseText = response.message.content;
-        } else if (response.message?.content?.[0]?.text) {
-          responseText = response.message.content[0].text;
-        } else {
-          // Fallback to other possible formats
-          responseText = response.text || 
-                       response.content || 
-                       response.message || 
-                       response.data || 
-                       response.choices?.[0]?.message?.content ||
-                       'No response received.';
-        }
-      } else if (response === null || response === undefined) {
-        responseText = 'No response received.';
-      } else {
-        responseText = String(response);
-      }
+      // Extract text from response
+      const responseText = extractResponseText(response);
       
       console.log('Final response text:', responseText, 'Type:', typeof responseText);
       
@@ -114,11 +101,56 @@ export const ChatContainer = () => {
       console.error('Puter AI Error:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to get AI response. Please try again.",
+        description: "Failed to get AI response. Using fallback mode.",
         variant: "destructive"
       });
+      
+      // Fallback response
+      const fallbackResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "I apologize, but I'm having trouble connecting to the AI service right now. Please try again in a moment.",
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, fallbackResponse]);
     } finally {
       setIsTyping(false);
+    }
+  };
+  
+  const mapToPuterModel = (modelId: string): string => {
+    const modelMap: Record<string, string> = {
+      'deepseek-reasoner': 'deepseek-r1',
+      'deepseek-chat': 'deepseek-v3',
+      'gemini-2.0-flash': 'gemini-2.0-flash-exp'
+    };
+    
+    return modelMap[modelId] || 'gpt-3.5-turbo';
+  };
+  
+  const extractResponseText = (response: any): string => {
+    if (typeof response === 'string') {
+      return response;
+    } else if (response && typeof response === 'object') {
+      // Handle different Puter response formats
+      if (response.message?.content) {
+        return response.message.content;
+      } else if (response.message?.content?.[0]?.text) {
+        return response.message.content[0].text;
+      } else {
+        // Fallback to other possible formats
+        return response.text || 
+               response.content || 
+               response.message || 
+               response.data || 
+               response.choices?.[0]?.message?.content ||
+               'No response received.';
+      }
+    } else if (response === null || response === undefined) {
+      return 'No response received.';
+    } else {
+      return String(response);
     }
   };
 

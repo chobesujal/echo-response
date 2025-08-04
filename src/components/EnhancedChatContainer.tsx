@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Trash2, RefreshCw, Copy, Download, Share, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { aiService } from "@/lib/aiService";
+import { puterService } from "@/lib/puterService";
 
 interface Message {
   id: string;
@@ -175,83 +175,99 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
     setStreamingText("");
 
     try {
-      // Prepare context for better responses
-      const contextMessages = updatedMessages
-        .slice(-6) // Last 6 messages for context
-        .filter(msg => msg.id !== 'welcome')
-        .map(msg => ({
-          role: (msg.isUser ? 'user' : 'assistant') as 'user' | 'assistant' | 'system',
-          content: msg.text
-        }));
-
-      let fullResponse = "";
-
-      // Use real AI service with streaming
-      await aiService.streamChat(
-        contextMessages,
-        selectedModel,
-        (chunk: string) => {
-          fullResponse += chunk;
-          setStreamingText(fullResponse);
-        },
-        () => {
-          // On completion
-          const aiResponse: Message = {
-            id: (Date.now() + 1).toString(),
-            text: fullResponse,
-            isUser: false,
-            timestamp: new Date(),
-            model: selectedModel
-          };
-
-          const finalMessages = [...updatedMessages, aiResponse];
-          setMessages(finalMessages);
-          saveChat(finalMessages);
-          setIsStreaming(false);
-          setStreamingText("");
-        },
-        (error: Error) => {
-          // On error
-          console.error('AI Error:', error);
-          
-          const errorResponse: Message = {
-            id: (Date.now() + 1).toString(),
-            text: `I apologize, but I encountered an error while connecting to ${modelDisplayNames[selectedModel]}. This could be due to:
-
-• **API limitations**: The model may require valid API keys
-• **Network issues**: Check your internet connection
-• **Service availability**: The AI service might be temporarily unavailable
-
-**Don't worry!** I'm still functional with enhanced simulation mode. Try asking me anything and I'll do my best to help! 🚀
-
-**Tip**: For production use, add your API keys in the environment variables:
-- VITE_OPENAI_API_KEY for GPT models
-- VITE_ANTHROPIC_API_KEY for Claude models  
-- VITE_GOOGLE_API_KEY for Gemini models
-- VITE_DEEPSEEK_API_KEY for DeepSeek models`,
-            isUser: false,
-            timestamp: new Date(),
-            model: 'error'
-          };
-          
-          const finalMessages = [...updatedMessages, errorResponse];
-          setMessages(finalMessages);
-          setIsStreaming(false);
-          setStreamingText("");
-          
-          toast({
-            title: "Cosmic AI Notice",
-            description: `Using enhanced simulation mode. Add API keys for real AI responses.`,
-            variant: "default"
-          });
-        }
-      );
+      // Use Puter AI API
+      console.log('Sending message to Puter:', text);
       
-    } catch (error) {
-      console.error('Unexpected error:', error);
+      // Prepare context messages for better responses
+      const recentMessages = updatedMessages.slice(-5).filter(msg => msg.id !== 'welcome');
+      const contextMessages = recentMessages.map(msg => ({
+        role: msg.isUser ? 'user' : 'assistant',
+        content: msg.text
+      }));
+      
+      // Map our model names to Puter-compatible models
+      const puterModel = mapToPuterModel(selectedModel);
+      
+      let fullResponse = "";
+      
+      // Check if Puter is available
+      if (typeof (window as any).puter === 'undefined') {
+        throw new Error('Puter SDK not loaded');
+      }
+      
+      // Use Puter AI with streaming-like behavior
+      const response = await (window as any).puter.ai.chat(text, {
+        model: puterModel,
+        context: contextMessages,
+        max_tokens: 1000,
+        temperature: selectedModel.includes('reasoner') ? 0.1 : 0.7
+      });
+      
+      console.log('Puter response:', response, 'Type:', typeof response);
+      
+      // Extract text from response
+      let responseText = extractResponseText(response);
+      
+      // Simulate streaming for better UX
+      await streamResponseRealTime(responseText);
+      
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: responseText,
+        isUser: false,
+        timestamp: new Date(),
+        model: selectedModel
+      };
+
+      const finalMessages = [...updatedMessages, aiResponse];
+      setMessages(finalMessages);
+      saveChat(finalMessages);
       setIsStreaming(false);
       setStreamingText("");
+      
+    } catch (error) {
+      console.error('Puter AI Error:', error);
+      
+      // Fallback to enhanced simulation
+      const fallbackResponse = await simulateAdvancedResponse(text, selectedModel, []);
+      await streamResponseRealTime(fallbackResponse);
+      
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: fallbackResponse,
+        isUser: false,
+        timestamp: new Date(),
+        model: selectedModel
+      };
+
+      const finalMessages = [...updatedMessages, aiResponse];
+      setMessages(finalMessages);
+      saveChat(finalMessages);
+      setIsStreaming(false);
+      setStreamingText("");
+      
+      toast({
+        title: "Using Fallback Mode",
+        description: "Puter AI unavailable, using enhanced simulation.",
+        variant: "default"
+      });
     }
+  };
+  
+  const mapToPuterModel = (modelId: string): string => {
+    // Map our model IDs to Puter-compatible model names
+    const modelMap: Record<string, string> = {
+      'deepseek-reasoner': 'deepseek-r1',
+      'deepseek-chat': 'deepseek-v3',
+      'gemini-2.0-flash': 'gemini-2.0-flash-exp',
+      'claude-3-5-sonnet': 'claude-3-5-sonnet',
+      'claude-3-opus': 'claude-3-opus',
+      'gpt-4': 'gpt-4',
+      'gpt-4-turbo': 'gpt-4-turbo',
+      'gpt-3.5-turbo': 'gpt-3.5-turbo'
+    };
+    
+    return modelMap[modelId] || 'gpt-3.5-turbo';
   };
 
   const extractResponseText = (response: any): string => {
