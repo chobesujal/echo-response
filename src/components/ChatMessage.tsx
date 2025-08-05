@@ -37,15 +37,15 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
       isUser ? "justify-end" : "justify-start"
     )}>
       <div className={cn(
-        "max-w-[80%] px-4 py-3 rounded-2xl shadow-message",
+        "max-w-[80%] px-4 py-3 rounded-2xl",
         isUser 
           ? "bg-user-message text-user-message-foreground ml-12" 
-          : "bg-ai-message text-ai-message-foreground mr-12"
+          : "bg-black text-white mr-12 border border-gray-800"
       )}>
         {isUser ? (
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{safeMessage}</p>
         ) : (
-          <div className="bg-ai-message text-ai-message-foreground">
+          <div className="text-white">{/* Removed bg and text classes as they're now set on parent */}
             {model && model !== 'system' && model !== 'error' && (
               <div className="text-xs text-muted-foreground mb-2 opacity-70">
                 {model}
@@ -127,43 +127,40 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
         
         {/* Action buttons for AI messages */}
         {!isUser && (
-          <div className="flex items-center gap-1 mt-3 pt-2 border-t border-white/10">
+          <div className="flex items-center gap-1 mt-3 pt-2 border-t border-gray-700">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
               onClick={() => copyToClipboard(safeMessage)}
             >
-              <Copy className="w-3 h-3 mr-1" />
-              Copy
+              <Copy className="w-3 h-3" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
             >
-              <RotateCcw className="w-3 h-3 mr-1" />
-              Retry
+              <RotateCcw className="w-3 h-3" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
             >
-              <Share className="w-3 h-3 mr-1" />
-              Share
+              <Share className="w-3 h-3" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
             >
               <ThumbsUp className="w-3 h-3" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
             >
               <ThumbsDown className="w-3 h-3" />
             </Button>

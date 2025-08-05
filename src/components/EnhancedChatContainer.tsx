@@ -55,7 +55,7 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "Hello! I'm Gemini, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
+      text: "Hello! I'm Cosmic, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -256,7 +256,7 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
-      text: "Hello! I'm Gemini, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
+      text: "Hello! I'm Cosmic, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -349,7 +349,7 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-primary-foreground animate-pulse-glow" />
-              <h2 className="text-xl font-bold text-primary-foreground">Gemini</h2>
+              <h2 className="text-xl font-bold text-primary-foreground">Cosmic</h2>
             </div>
             <div className="flex items-center gap-1 ml-2">
               <span className="text-sm text-primary-foreground/70">2.5 Flash</span>
