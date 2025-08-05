@@ -102,7 +102,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           {/* Sidebar */}
           <div className="w-64 bg-muted/30 p-4 border-r">
             <DialogHeader className="mb-4">
-              <DialogTitle className="text-lg">Settings</DialogTitle>
+              <DialogTitle className="text-lg">Cosmic AI Settings</DialogTitle>
             </DialogHeader>
             <div className="space-y-2">
               {tabs.map((tab) => {

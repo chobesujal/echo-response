@@ -175,7 +175,11 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
     setStreamingText("");
 
     try {
-      // Use Puter AI API
+      // Check if Puter is available
+      if (typeof (window as any).puter === 'undefined' || typeof (window as any).puter.ai === 'undefined') {
+        throw new Error('Puter SDK not available');
+      }
+
       console.log('Sending message to Puter:', text);
       
       // Prepare context messages for better responses
@@ -186,27 +190,17 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       }));
       
       // Map our model names to Puter-compatible models
-      const puterModel = mapToPuterModel(selectedModel);
+      const puterModel = puterService.mapModelName(selectedModel);
       
-      let fullResponse = "";
-      
-      // Check if Puter is available
-      if (typeof (window as any).puter === 'undefined') {
-        throw new Error('Puter SDK not loaded');
-      }
-      
-      // Use Puter AI with streaming-like behavior
-      const response = await (window as any).puter.ai.chat(text, {
+      // Use Puter AI service
+      const responseText = await puterService.chat(text, {
         model: puterModel,
         context: contextMessages,
         max_tokens: 1000,
         temperature: selectedModel.includes('reasoner') ? 0.1 : 0.7
       });
       
-      console.log('Puter response:', response, 'Type:', typeof response);
-      
-      // Extract text from response
-      let responseText = extractResponseText(response);
+      console.log('Puter response received:', responseText);
       
       // Simulate streaming for better UX
       await streamResponseRealTime(responseText);
@@ -227,248 +221,29 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       
     } catch (error) {
       console.error('Puter AI Error:', error);
+      setIsStreaming(false);
+      setStreamingText("");
       
-      // Fallback to enhanced simulation
-      const fallbackResponse = await simulateAdvancedResponse(text, selectedModel, []);
-      await streamResponseRealTime(fallbackResponse);
-      
-      const aiResponse: Message = {
+      const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: fallbackResponse,
+        text: `I apologize, but I'm unable to connect to the AI service at the moment. Please check that the Puter SDK is properly loaded and try again. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         isUser: false,
         timestamp: new Date(),
         model: selectedModel
       };
 
-      const finalMessages = [...updatedMessages, aiResponse];
+      const finalMessages = [...updatedMessages, errorResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
-      setIsStreaming(false);
-      setStreamingText("");
       
       toast({
-        title: "Using Fallback Mode",
-        description: "Puter AI unavailable, using enhanced simulation.",
-        variant: "default"
+        title: "Connection Error",
+        description: "Unable to connect to Puter AI service. Please try again.",
+        variant: "destructive"
       });
     }
   };
   
-  const mapToPuterModel = (modelId: string): string => {
-    // Map our model IDs to Puter-compatible model names
-    const modelMap: Record<string, string> = {
-      'deepseek-reasoner': 'deepseek-r1',
-      'deepseek-chat': 'deepseek-v3',
-      'gemini-2.0-flash': 'gemini-2.0-flash-exp',
-      'claude-3-5-sonnet': 'claude-3-5-sonnet',
-      'claude-3-opus': 'claude-3-opus',
-      'gpt-4': 'gpt-4',
-      'gpt-4-turbo': 'gpt-4-turbo',
-      'gpt-3.5-turbo': 'gpt-3.5-turbo'
-    };
-    
-    return modelMap[modelId] || 'gpt-3.5-turbo';
-  };
-
-  const extractResponseText = (response: any): string => {
-    if (typeof response === 'string') {
-      return response;
-    } else if (response && typeof response === 'object') {
-      if (response.message?.content) {
-        return response.message.content;
-      } else if (response.message?.content?.[0]?.text) {
-        return response.message.content[0].text;
-      } else {
-        return response.text || 
-               response.content || 
-               response.message || 
-               response.data || 
-               response.choices?.[0]?.message?.content ||
-               'No response received.';
-      }
-    }
-    return String(response) || 'No response received.';
-  };
-
-  const simulateAdvancedResponse = async (prompt: string, model: string, context: any[]): Promise<string> => {
-    // Reduced delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 700));
-    
-    // Analyze prompt for code-related requests
-    const isCodeRequest = /code|program|function|class|algorithm|debug|syntax|api|javascript|python|react|html|css/i.test(prompt);
-    const isExplanationRequest = /explain|how|what|why|describe|tell me about/i.test(prompt);
-    
-    if (isCodeRequest) {
-      return generateCodeResponse(prompt, model);
-    } else if (isExplanationRequest) {
-      return generateExplanationResponse(prompt, model);
-    } else {
-      return generateGeneralResponse(prompt, model, context);
-    }
-  };
-
-  const generateCodeResponse = (prompt: string, model: string): string => {
-    const codeExamples = [
-      `Here's a solution using ${modelDisplayNames[model as Model]}:
-
-\`\`\`javascript
-// Example implementation
-function sampleFunction() {
-  const result = processData();
-  return result.map(item => ({
-    ...item,
-    processed: true
-  }));
-}
-
-// Usage
-const data = sampleFunction();
-console.log(data);
-\`\`\`
-
-This approach provides:
-• Clean, readable code structure
-• Error handling capabilities
-• Optimized performance
-• Easy maintenance
-
-Would you like me to explain any specific part or add more features?`,
-
-      `Based on your request, here's an advanced implementation:
-
-\`\`\`typescript
-interface DataStructure {
-  id: string;
-  value: any;
-  metadata?: object;
-}
-
-class AdvancedProcessor {
-  private cache = new Map();
-  
-  async process(data: DataStructure[]): Promise<DataStructure[]> {
-    return data.map(item => this.processItem(item));
-  }
-  
-  private processItem(item: DataStructure): DataStructure {
-    // Advanced processing logic
-    return {
-      ...item,
-      processed: true,
-      timestamp: Date.now()
-    };
-  }
-}
-\`\`\`
-
-Key features:
-• TypeScript support for better type safety
-• Caching mechanism for performance
-• Modular design for scalability
-• Async/await for non-blocking operations`
-    ];
-    
-    return codeExamples[Math.floor(Math.random() * codeExamples.length)];
-  };
-
-  const generateExplanationResponse = (prompt: string, model: string): string => {
-    const explanations = [
-      `Let me break this down for you using ${modelDisplayNames[model as Model]}'s analytical capabilities:
-
-## Key Concepts
-
-1. **Core Principle**: The fundamental idea revolves around structured data processing
-2. **Implementation Strategy**: 
-   - Start with data validation
-   - Apply transformation rules
-   - Optimize for performance
-3. **Best Practices**:
-   - Use consistent naming conventions
-   - Implement proper error handling
-   - Document your code thoroughly
-
-## Practical Example
-
-Consider this real-world scenario where you need to handle user data efficiently while maintaining security and performance standards.
-
-Would you like me to dive deeper into any specific aspect?`,
-
-      `Excellent question! Here's a comprehensive explanation:
-
-### Understanding the Context
-${prompt.slice(0, 100)}...
-
-### Detailed Analysis
-1. **Primary Considerations**: 
-   - Scalability requirements
-   - Performance implications
-   - Security measures
-
-2. **Implementation Approach**:
-   - Modular architecture
-   - Clean code principles  
-   - Test-driven development
-
-3. **Advanced Techniques**:
-   - Caching strategies
-   - Optimization patterns
-   - Error recovery mechanisms
-
-### Next Steps
-I recommend starting with a basic implementation and gradually adding complexity as needed.`
-    ];
-    
-    return explanations[Math.floor(Math.random() * explanations.length)];
-  };
-
-  const generateGeneralResponse = (prompt: string, model: string, context: any[]): string => {
-    const responses = [
-      `Thank you for your question! As ${modelDisplayNames[model as Model]}, I can help you with:
-
-**For your specific request**: "${prompt.slice(0, 60)}..."
-
-I understand you're looking for assistance with this topic. While I'm currently in demonstration mode for this model, I can provide general guidance and suggestions.
-
-**Key points to consider**:
-• Context analysis and understanding
-• Step-by-step approach to problem-solving
-• Best practices and recommendations
-• Resource optimization
-
-**Next steps**:
-1. Clarify specific requirements
-2. Identify potential challenges
-3. Develop implementation strategy
-4. Test and iterate
-
-Is there a particular aspect you'd like me to focus on?`,
-
-      `I appreciate your question about "${prompt.slice(0, 50)}..."
-
-Based on the context from our conversation, I can see you're working on something important. Let me provide some insights:
-
-**Analysis**:
-- Your request involves multiple considerations
-- There are several approaches we could take
-- Each has its own advantages and trade-offs
-
-**Recommendations**:
-1. Start with a clear problem definition
-2. Break down into manageable components
-3. Consider scalability from the beginning
-4. Plan for future enhancements
-
-**Available Resources**:
-• Documentation and guides
-• Community best practices
-• Code examples and templates
-• Performance optimization tips
-
-How would you like to proceed with this?`
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
 
   const streamResponseRealTime = async (text: string) => {
     const chars = text.split('');
