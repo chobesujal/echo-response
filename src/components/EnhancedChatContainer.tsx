@@ -55,7 +55,7 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our cosmic conversation! ✨",
+      text: "Hello! I'm Gemini, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -256,7 +256,7 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
-      text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our cosmic conversation! ✨",
+      text: "Hello! I'm Gemini, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -346,9 +346,17 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
     <div className="flex flex-col h-full bg-sidebar/50 backdrop-blur-sm border-r border-sidebar-border">
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border bg-gradient-primary">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary-foreground animate-pulse-glow" />
-            <h2 className="text-lg font-semibold text-primary-foreground">Cosmic AI</h2>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-primary-foreground animate-pulse-glow" />
+              <h2 className="text-xl font-bold text-primary-foreground">Gemini</h2>
+            </div>
+            <div className="flex items-center gap-1 ml-2">
+              <span className="text-sm text-primary-foreground/70">2.5 Flash</span>
+              <div className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full border border-green-400/30">
+                Live
+              </div>
+            </div>
           </div>
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
             <SelectTrigger className="w-56 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">

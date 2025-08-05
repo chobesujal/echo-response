@@ -74,51 +74,51 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 237 22% 7%;
+    --foreground: 270 20% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 245 25% 12%;
+    --card-foreground: 270 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 245 25% 12%;
+    --popover-foreground: 270 20% 95%;
 
-    --primary: 250 85% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 262 80% 65%;
+    --primary-foreground: 237 22% 7%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 245 25% 15%;
+    --secondary-foreground: 270 20% 95%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 245 25% 15%;
+    --muted-foreground: 270 10% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 245 25% 15%;
+    --accent-foreground: 270 20% 95%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 270 20% 95%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 250 85% 60%;
+    --border: 245 25% 20%;
+    --input: 245 25% 15%;
+    --ring: 262 80% 65%;
 
     /* Chat-specific colors - dark mode */
-    --user-message: 250 85% 60%;
-    --user-message-foreground: 0 0% 100%;
-    --ai-message: 217.2 32.6% 17.5%;
-    --ai-message-foreground: 210 40% 98%;
+    --user-message: 262 80% 65%;
+    --user-message-foreground: 237 22% 7%;
+    --ai-message: 245 25% 12%;
+    --ai-message-foreground: 270 20% 95%;
     
     /* Gradients - dark mode */
-    --gradient-bg: linear-gradient(135deg, hsl(220 15% 8%) 0%, hsl(220 20% 12%) 100%);
-    --gradient-primary: linear-gradient(135deg, hsl(260 85% 65%) 0%, hsl(280 90% 70%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(220 15% 15%) 0%, hsl(220 20% 18%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(220 15% 15%) 0%, hsl(225 20% 20%) 100%);
+    --gradient-bg: linear-gradient(135deg, hsl(237 22% 7%) 0%, hsl(245 25% 9%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(262 80% 65%) 0%, hsl(280 75% 70%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(245 25% 12%) 0%, hsl(245 25% 15%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(245 25% 15%) 0%, hsl(250 30% 20%) 100%);
     
     /* Shadows - dark mode */
     --shadow-message: 0 2px 8px hsl(0 0% 0% / 0.4);
     --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.5);
-    --shadow-elegant: 0 10px 30px -10px hsl(260 85% 65% / 0.4);
-    --shadow-glow: 0 0 40px hsl(260 85% 70% / 0.5);
+    --shadow-elegant: 0 10px 30px -10px hsl(262 80% 65% / 0.4);
+    --shadow-glow: 0 0 40px hsl(262 80% 70% / 0.5);
 
     --sidebar-background: 220 15% 8%;
     --sidebar-foreground: 240 4.8% 95.9%;

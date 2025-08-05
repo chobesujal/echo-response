@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Check, Play, Eye } from "lucide-react";
+import { Copy, Check, Play, Eye, RotateCcw, Share, Download, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CodePreview } from "./CodePreview";
@@ -124,6 +124,52 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
             </div>
           </div>
         )}
+        
+        {/* Action buttons for AI messages */}
+        {!isUser && (
+          <div className="flex items-center gap-1 mt-3 pt-2 border-t border-white/10">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+              onClick={() => copyToClipboard(safeMessage)}
+            >
+              <Copy className="w-3 h-3 mr-1" />
+              Copy
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+            >
+              <RotateCcw className="w-3 h-3 mr-1" />
+              Retry
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+            >
+              <Share className="w-3 h-3 mr-1" />
+              Share
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+            >
+              <ThumbsUp className="w-3 h-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30"
+            >
+              <ThumbsDown className="w-3 h-3" />
+            </Button>
+          </div>
+        )}
+        
         {timestamp && (
           <div className={cn(
             "text-xs mt-1 opacity-60",
