@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Check, Play, Eye, RotateCcw, Share, Download, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Copy, Check, Play, Eye } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CodePreview } from "./CodePreview";
@@ -37,15 +37,15 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
       isUser ? "justify-end" : "justify-start"
     )}>
       <div className={cn(
-        "max-w-[80%] px-4 py-3 rounded-2xl",
+        "max-w-[80%] px-4 py-3 rounded-2xl shadow-message",
         isUser 
           ? "bg-user-message text-user-message-foreground ml-12" 
-          : "bg-black text-white mr-12 border border-gray-800"
+          : "bg-ai-message text-ai-message-foreground mr-12"
       )}>
         {isUser ? (
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{safeMessage}</p>
         ) : (
-          <div className="text-white">{/* Removed bg and text classes as they're now set on parent */}
+          <div className="bg-ai-message text-ai-message-foreground">
             {model && model !== 'system' && model !== 'error' && (
               <div className="text-xs text-muted-foreground mb-2 opacity-70">
                 {model}
@@ -124,49 +124,6 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
             </div>
           </div>
         )}
-        
-        {/* Action buttons for AI messages */}
-        {!isUser && (
-          <div className="flex items-center gap-1 mt-3 pt-2 border-t border-gray-700">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
-              onClick={() => copyToClipboard(safeMessage)}
-            >
-              <Copy className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
-            >
-              <RotateCcw className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
-            >
-              <Share className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
-            >
-              <ThumbsUp className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-xs hover:bg-gray-800 text-gray-400 hover:text-white"
-            >
-              <ThumbsDown className="w-3 h-3" />
-            </Button>
-          </div>
-        )}
-        
         {timestamp && (
           <div className={cn(
             "text-xs mt-1 opacity-60",
