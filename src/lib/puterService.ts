@@ -97,30 +97,31 @@ export class PuterService {
   
   getAvailableModels(): string[] {
     return [
-      'gpt-3.5-turbo',
-      'gpt-4',
+      'gpt-4o-mini',
+      'gpt-4o',
       'gpt-4-turbo',
-      'claude-3-5-sonnet',
-      'claude-3-opus',
-      'gemini-2.0-flash-exp',
-      'deepseek-v3',
-      'deepseek-r1'
+      'gpt-3.5-turbo',
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro'
     ];
   }
   
   mapModelName(modelId: string): string {
     const modelMap: Record<string, string> = {
-      'deepseek-reasoner': 'deepseek-r1',
-      'deepseek-chat': 'deepseek-v3',
-      'gemini-2.0-flash': 'gemini-2.0-flash-exp',
-      'claude-3-5-sonnet': 'claude-3-5-sonnet',
-      'claude-3-opus': 'claude-3-opus',
-      'gpt-4': 'gpt-4',
+      'deepseek-reasoner': 'gpt-4o',
+      'deepseek-chat': 'gpt-4o-mini',
+      'gemini-2.0-flash': 'gemini-1.5-flash',
+      'claude-3-5-sonnet': 'claude-3-5-sonnet-20241022',
+      'claude-3-opus': 'claude-3-opus-20240229',
+      'gpt-4': 'gpt-4o',
       'gpt-4-turbo': 'gpt-4-turbo',
       'gpt-3.5-turbo': 'gpt-3.5-turbo'
     };
     
-    return modelMap[modelId] || 'gpt-3.5-turbo';
+    return modelMap[modelId] || 'gpt-4o-mini';
   }
 }
 
