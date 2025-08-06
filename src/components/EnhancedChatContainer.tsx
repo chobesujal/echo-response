@@ -298,7 +298,7 @@ export const EnhancedChatContainer = ({
     }
   };
   return <div className="flex flex-col h-full bg-background">
-      <div className="flex items-center justify-between p-3 bg-transparent">
+      <div className="flex items-center justify-between p-3 bg-background border-b border-border">
         <div className="flex items-center gap-4">
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
             <SelectTrigger className="w-56 bg-background border-border text-foreground">
