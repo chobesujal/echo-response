@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, RefreshCw, Copy, Download, Share, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { puterService } from "@/lib/puterService";
-
 interface Message {
   id: string;
   text: string;
@@ -18,7 +17,6 @@ interface Message {
   timestamp: Date;
   model?: string;
 }
-
 interface ChatSession {
   id: string;
   title: string;
@@ -26,9 +24,7 @@ interface ChatSession {
   timestamp: Date;
   messageCount: number;
 }
-
 type Model = 'deepseek-reasoner' | 'deepseek-chat' | 'gemini-2.0-flash' | 'claude-3-5-sonnet' | 'claude-3-opus' | 'gpt-4' | 'gpt-4-turbo' | 'gpt-3.5-turbo';
-
 const modelDisplayNames: Record<Model, string> = {
   'deepseek-reasoner': 'DeepSeek R1 (Reasoning)',
   'deepseek-chat': 'DeepSeek V3 (Chat)',
@@ -39,35 +35,34 @@ const modelDisplayNames: Record<Model, string> = {
   'gpt-4-turbo': 'GPT-4 Turbo',
   'gpt-3.5-turbo': 'GPT-3.5 Turbo'
 };
-
 const modelCategories = {
   'Premium Reasoning': ['deepseek-reasoner', 'claude-3-opus', 'gpt-4'],
   'Fast & Efficient': ['deepseek-chat', 'gemini-2.0-flash', 'claude-3-5-sonnet', 'gpt-4-turbo'],
   'Budget Friendly': ['gpt-3.5-turbo']
 };
-
 interface EnhancedChatContainerProps {
   currentChatId?: string;
   onChatUpdate?: (chatId: string, title: string, messageCount: number) => void;
 }
-
-export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedChatContainerProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our cosmic conversation! ✨",
-      isUser: false,
-      timestamp: new Date(),
-      model: 'system'
-    }
-  ]);
+export const EnhancedChatContainer = ({
+  currentChatId,
+  onChatUpdate
+}: EnhancedChatContainerProps) => {
+  const [messages, setMessages] = useState<Message[]>([{
+    id: "welcome",
+    text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our cosmic conversation! ✨",
+    isUser: false,
+    timestamp: new Date(),
+    model: 'system'
+  }]);
   const [isTyping, setIsTyping] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model>('deepseek-reasoner');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
       const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -76,17 +71,14 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       }
     }
   };
-
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping, streamingText]);
-
   useEffect(() => {
     if (currentChatId) {
       loadChat(currentChatId);
     }
   }, [currentChatId]);
-
   const loadChat = (chatId: string) => {
     try {
       const savedChats = localStorage.getItem('chat-sessions');
@@ -110,7 +102,6 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       });
     }
   };
-
   const saveChat = (updatedMessages: Message[]) => {
     try {
       const chatSession: ChatSession = {
@@ -120,10 +111,8 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
         timestamp: new Date(),
         messageCount: updatedMessages.filter(m => m.id !== 'welcome').length
       };
-
       const savedChats = localStorage.getItem('chat-sessions');
       let sessions: ChatSession[] = savedChats ? JSON.parse(savedChats) : [];
-      
       const existingIndex = sessions.findIndex(s => s.id === chatSession.id);
       if (existingIndex >= 0) {
         sessions[existingIndex] = chatSession;
@@ -133,9 +122,8 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
 
       // Keep only last 50 sessions
       sessions = sessions.slice(0, 50);
-      
       localStorage.setItem('chat-sessions', JSON.stringify(sessions));
-      
+
       // Update chat history in sidebar
       const historyItems = sessions.map(s => ({
         id: s.id,
@@ -144,13 +132,11 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
         messageCount: s.messageCount
       }));
       localStorage.setItem('chat-history', JSON.stringify(historyItems));
-      
       onChatUpdate?.(chatSession.id, chatSession.title, chatSession.messageCount);
     } catch (error) {
       console.error('Error saving chat:', error);
     }
   };
-
   const generateChatTitle = (messages: Message[]): string => {
     const firstUserMessage = messages.find(m => m.isUser);
     if (firstUserMessage) {
@@ -159,7 +145,6 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
     }
     return `Chat ${new Date().toLocaleString()}`;
   };
-
   const handleSendMessage = async (text: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -168,30 +153,27 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       timestamp: new Date(),
       model: selectedModel
     };
-
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setIsStreaming(true);
     setStreamingText("");
-
     try {
       // Check if Puter is available
       if (typeof (window as any).puter === 'undefined' || typeof (window as any).puter.ai === 'undefined') {
         throw new Error('Puter SDK not available');
       }
-
       console.log('Sending message to Puter:', text);
-      
+
       // Prepare context messages for better responses
       const recentMessages = updatedMessages.slice(-5).filter(msg => msg.id !== 'welcome');
       const contextMessages = recentMessages.map(msg => ({
         role: msg.isUser ? 'user' : 'assistant',
         content: msg.text
       }));
-      
+
       // Map our model names to Puter-compatible models
       const puterModel = puterService.mapModelName(selectedModel);
-      
+
       // Use Puter AI service
       const responseText = await puterService.chat(text, {
         model: puterModel,
@@ -199,12 +181,10 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
         max_tokens: 1000,
         temperature: selectedModel.includes('reasoner') ? 0.1 : 0.7
       });
-      
       console.log('Puter response received:', responseText);
-      
+
       // Simulate streaming for better UX
       await streamResponseRealTime(responseText);
-      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: responseText,
@@ -212,18 +192,15 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
         timestamp: new Date(),
         model: selectedModel
       };
-
       const finalMessages = [...updatedMessages, aiResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
       setIsStreaming(false);
       setStreamingText("");
-      
     } catch (error) {
       console.error('Puter AI Error:', error);
       setIsStreaming(false);
       setStreamingText("");
-      
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: `I apologize, but I'm unable to connect to the AI service at the moment. Please check that the Puter SDK is properly loaded and try again. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -231,11 +208,9 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
         timestamp: new Date(),
         model: selectedModel
       };
-
       const finalMessages = [...updatedMessages, errorResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
-      
       toast({
         title: "Connection Error",
         description: "Unable to connect to Puter AI service. Please try again.",
@@ -243,8 +218,6 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       });
     }
   };
-  
-
   const streamResponseRealTime = async (text: string) => {
     const chars = text.split('');
     for (let i = 0; i < chars.length; i++) {
@@ -252,7 +225,6 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       await new Promise(resolve => setTimeout(resolve, 20 + Math.random() * 40));
     }
   };
-
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
@@ -264,7 +236,6 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
     setMessages([welcomeMessage]);
     setStreamingText("");
   };
-
   const regenerateLastResponse = async () => {
     const lastUserMessage = [...messages].reverse().find(m => m.isUser);
     if (lastUserMessage) {
@@ -279,25 +250,19 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       }
       const messagesUpToLastUser = messages.slice(0, lastUserIndex + 1);
       setMessages(messagesUpToLastUser);
-      
+
       // Regenerate response
       await handleSendMessage(lastUserMessage.text);
     }
   };
-
   const copyChat = () => {
-    const chatText = messages
-      .filter(m => m.id !== 'welcome')
-      .map(m => `${m.isUser ? 'You' : `AI (${m.model})`}: ${m.text}`)
-      .join('\n\n');
-    
+    const chatText = messages.filter(m => m.id !== 'welcome').map(m => `${m.isUser ? 'You' : `AI (${m.model})`}: ${m.text}`).join('\n\n');
     navigator.clipboard.writeText(chatText);
     toast({
       title: "Chat copied",
       description: "Chat history has been copied to clipboard."
     });
   };
-
   const exportChat = () => {
     const chatData = {
       title: generateChatTitle(messages),
@@ -305,29 +270,20 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       model: selectedModel,
       messages: messages.filter(m => m.id !== 'welcome')
     };
-    
     const dataStr = JSON.stringify(chatData, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const exportFileDefaultName = `chat-${Date.now()}.json`;
-    
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
-    
     toast({
       title: "Chat exported",
       description: "Chat has been downloaded as JSON file."
     });
   };
-
   const shareChat = async () => {
-    const chatText = messages
-      .filter(m => m.id !== 'welcome')
-      .map(m => `${m.isUser ? 'You' : 'AI'}: ${m.text}`)
-      .join('\n\n');
-    
+    const chatText = messages.filter(m => m.id !== 'welcome').map(m => `${m.isUser ? 'You' : 'AI'}: ${m.text}`).join('\n\n');
     if (navigator.share) {
       try {
         await navigator.share({
@@ -341,10 +297,8 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       copyChat(); // Fallback to copy
     }
   };
-
-  return (
-    <div className="flex flex-col h-full bg-sidebar/50 backdrop-blur-sm border-r border-sidebar-border">
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border bg-gradient-primary">
+  return <div className="flex flex-col h-full bg-sidebar/50 backdrop-blur-sm border-r border-sidebar-border">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border bg-gradient-primary bg-slate-900">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary-foreground animate-pulse-glow" />
@@ -355,66 +309,34 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(modelCategories).map(([category, models]) => (
-                <div key={category}>
+              {Object.entries(modelCategories).map(([category, models]) => <div key={category}>
                   <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
                     {category}
                   </div>
-                  {models.map((model) => (
-                    <SelectItem key={model} value={model}>
+                  {models.map(model => <SelectItem key={model} value={model}>
                       <div className="flex items-center justify-between w-full">
                         <span>{modelDisplayNames[model as Model]}</span>
-                        {(model === 'deepseek-reasoner' || model === 'deepseek-chat' || model === 'gemini-2.0-flash') && (
-                          <Badge variant="secondary" className="ml-2 text-xs">Live</Badge>
-                        )}
+                        {(model === 'deepseek-reasoner' || model === 'deepseek-chat' || model === 'gemini-2.0-flash') && <Badge variant="secondary" className="ml-2 text-xs">Live</Badge>}
                       </div>
-                    </SelectItem>
-                  ))}
-                </div>
-              ))}
+                    </SelectItem>)}
+                </div>)}
             </SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={regenerateLastResponse}
-            disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
-            className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-          >
+          <Button variant="ghost" size="sm" onClick={regenerateLastResponse} disabled={isStreaming || messages.filter(m => m.isUser).length === 0} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={copyChat}
-            className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-          >
+          <Button variant="ghost" size="sm" onClick={copyChat} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
             <Copy className="w-4 h-4" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={exportChat}
-            className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-          >
+          <Button variant="ghost" size="sm" onClick={exportChat} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
             <Download className="w-4 h-4" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={shareChat}
-            className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-          >
+          <Button variant="ghost" size="sm" onClick={shareChat} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
             <Share className="w-4 h-4" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={clearChat}
-            className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-          >
+          <Button variant="ghost" size="sm" onClick={clearChat} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
             <Trash2 className="w-4 h-4" />
           </Button>
           <div className="text-sm text-primary-foreground/80">
@@ -425,33 +347,16 @@ export const EnhancedChatContainer = ({ currentChatId, onChatUpdate }: EnhancedC
       
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-6 bg-gradient-bg">
         <div className="space-y-6 max-w-4xl mx-auto">
-          {messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              message={message.text}
-              isUser={message.isUser}
-              timestamp={message.timestamp}
-              model={message.model}
-            />
-          ))}
+          {messages.map(message => <ChatMessage key={message.id} message={message.text} isUser={message.isUser} timestamp={message.timestamp} model={message.model} />)}
           {isTyping && !isStreaming && <TypingIndicator />}
-          {isStreaming && streamingText && (
-            <div className="animate-fade-in">
-              <ChatMessage
-                message={streamingText}
-                isUser={false}
-                timestamp={new Date()}
-                model={selectedModel}
-                isStreaming={true}
-              />
-            </div>
-          )}
+          {isStreaming && streamingText && <div className="animate-fade-in">
+              <ChatMessage message={streamingText} isUser={false} timestamp={new Date()} model={selectedModel} isStreaming={true} />
+            </div>}
         </div>
       </ScrollArea>
 
       <div className="p-4 bg-sidebar/30 backdrop-blur-sm border-t border-sidebar-border">
         <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
       </div>
-    </div>
-  );
+    </div>;
 };
