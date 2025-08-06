@@ -1,15 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "./ChatMessage";
-import { ChatInput } from "./ChatInput";
+import { EnhancedChatInput } from "./EnhancedChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, RefreshCw, Copy, Download, Share, Sparkles } from "lucide-react";
+import { Trash2, RefreshCw, Copy, Download, Share, Sparkles, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { puterService } from "@/lib/puterService";
+import { VoiceSettings } from "./VoiceSettings";
 interface Message {
   id: string;
   text: string;
@@ -145,24 +146,44 @@ export const EnhancedChatContainer = ({
     }
     return `Chat ${new Date().toLocaleString()}`;
   };
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, files?: File[], mode?: 'thinking' | 'search' | 'normal') => {
+    // Handle file uploads
+    let messageText = text;
+    if (files && files.length > 0) {
+      const fileDescriptions = files.map(file => `[File: ${file.name}]`).join(' ');
+      messageText = `${text} ${fileDescriptions}`.trim();
+      
+      // In a real app, you'd upload these files to a server
+      console.log('Files to process:', files);
+    }
+
+    // Add mode context to message
+    if (mode === 'thinking') {
+      messageText = `[Thinking Mode] ${messageText}`;
+    } else if (mode === 'search') {
+      messageText = `[Search Mode] ${messageText}`;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
-      text,
+      text: messageText,
       isUser: true,
       timestamp: new Date(),
       model: selectedModel
     };
+    
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setIsStreaming(true);
     setStreamingText("");
+
     try {
       // Check if Puter is available
       if (typeof (window as any).puter === 'undefined' || typeof (window as any).puter.ai === 'undefined') {
         throw new Error('Puter SDK not available');
       }
-      console.log('Sending message to Puter:', text);
+      
+      console.log('Sending message to Puter:', messageText);
 
       // Prepare context messages for better responses
       const recentMessages = updatedMessages.slice(-5).filter(msg => msg.id !== 'welcome');
@@ -174,17 +195,27 @@ export const EnhancedChatContainer = ({
       // Map our model names to Puter-compatible models
       const puterModel = puterService.mapModelName(selectedModel);
 
+      // Adjust prompt based on mode
+      let systemPrompt = '';
+      if (mode === 'thinking') {
+        systemPrompt = 'Think step by step and explain your reasoning process. ';
+      } else if (mode === 'search') {
+        systemPrompt = 'Search for relevant information and provide comprehensive answers. ';
+      }
+
       // Use Puter AI service
-      const responseText = await puterService.chat(text, {
+      const responseText = await puterService.chat(systemPrompt + messageText, {
         model: puterModel,
         context: contextMessages,
         max_tokens: 1000,
-        temperature: selectedModel.includes('reasoner') ? 0.1 : 0.7
+        temperature: selectedModel.includes('reasoner') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
       });
+      
       console.log('Puter response received:', responseText);
 
       // Simulate streaming for better UX
       await streamResponseRealTime(responseText);
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: responseText,
@@ -192,6 +223,7 @@ export const EnhancedChatContainer = ({
         timestamp: new Date(),
         model: selectedModel
       };
+      
       const finalMessages = [...updatedMessages, aiResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
@@ -201,6 +233,7 @@ export const EnhancedChatContainer = ({
       console.error('Puter AI Error:', error);
       setIsStreaming(false);
       setStreamingText("");
+      
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: `I apologize, but I'm unable to connect to the AI service at the moment. Please check that the Puter SDK is properly loaded and try again. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -208,9 +241,11 @@ export const EnhancedChatContainer = ({
         timestamp: new Date(),
         model: selectedModel
       };
+      
       const finalMessages = [...updatedMessages, errorResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
+      
       toast({
         title: "Connection Error",
         description: "Unable to connect to Puter AI service. Please try again.",
@@ -252,7 +287,7 @@ export const EnhancedChatContainer = ({
       setMessages(messagesUpToLastUser);
 
       // Regenerate response
-      await handleSendMessage(lastUserMessage.text);
+      await handleSendMessage(lastUserMessage.text, [], 'normal');
     }
   };
   const copyChat = () => {
@@ -320,6 +355,11 @@ export const EnhancedChatContainer = ({
           </Select>
         </div>
         <div className="flex items-center gap-2">
+          <VoiceSettings>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted">
+              <Settings className="w-4 h-4" />
+            </Button>
+          </VoiceSettings>
           <Button variant="ghost" size="sm" onClick={regenerateLastResponse} disabled={isStreaming || messages.filter(m => m.isUser).length === 0} className="text-muted-foreground hover:text-foreground hover:bg-muted">
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -351,8 +391,8 @@ export const EnhancedChatContainer = ({
         </div>
       </ScrollArea>
 
-      <div className="p-4 bg-sidebar/30 backdrop-blur-sm border-t border-sidebar-border">
-        <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
+      <div className="p-4 bg-background border-t border-border">
+        <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
       </div>
     </div>;
 };
