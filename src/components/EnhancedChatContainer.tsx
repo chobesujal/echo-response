@@ -298,7 +298,7 @@ export const EnhancedChatContainer = ({
     }
   };
   return <div className="flex flex-col h-full bg-sidebar/50 backdrop-blur-sm border-r border-sidebar-border">
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border bg-gradient-primary bg-slate-900">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border bg-transparent">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary-foreground animate-pulse-glow" />
