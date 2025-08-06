@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MessageSquare, Plus, Settings, Trash2, Moon, Sun, Download, Upload } from "lucide-react";
+import { MessageSquare, Plus, Settings, Trash2, Moon, Sun, Download, Upload, Sparkles } from "lucide-react";
 import { UserMenu } from "./UserMenu";
 import {
   Sidebar,
@@ -153,6 +153,16 @@ export function AppSidebar({
       <SidebarTrigger className="m-2 self-end" />
       
       <SidebarContent>
+        {/* Header with Cosmic AI branding */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div className="flex items-center gap-2 px-2 py-3 border-b border-sidebar-border">
+              <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+              {!collapsed && <h2 className="text-lg font-semibold text-sidebar-foreground">Cosmic AI</h2>}
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         {/* New Chat Section */}
         <SidebarGroup>
           <SidebarGroupContent>

@@ -297,15 +297,11 @@ export const EnhancedChatContainer = ({
       copyChat(); // Fallback to copy
     }
   };
-  return <div className="flex flex-col h-full bg-sidebar/50 backdrop-blur-sm border-r border-sidebar-border">
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border bg-transparent">
+  return <div className="flex flex-col h-full bg-background">
+      <div className="flex items-center justify-between p-3 bg-transparent">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary-foreground animate-pulse-glow" />
-            <h2 className="text-lg font-semibold text-primary-foreground">Cosmic AI</h2>
-          </div>
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
-            <SelectTrigger className="w-56 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+            <SelectTrigger className="w-56 bg-background border-border text-foreground">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -324,22 +320,22 @@ export const EnhancedChatContainer = ({
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={regenerateLastResponse} disabled={isStreaming || messages.filter(m => m.isUser).length === 0} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
+          <Button variant="ghost" size="sm" onClick={regenerateLastResponse} disabled={isStreaming || messages.filter(m => m.isUser).length === 0} className="text-muted-foreground hover:text-foreground hover:bg-muted">
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={copyChat} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
+          <Button variant="ghost" size="sm" onClick={copyChat} className="text-muted-foreground hover:text-foreground hover:bg-muted">
             <Copy className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={exportChat} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
+          <Button variant="ghost" size="sm" onClick={exportChat} className="text-muted-foreground hover:text-foreground hover:bg-muted">
             <Download className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={shareChat} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
+          <Button variant="ghost" size="sm" onClick={shareChat} className="text-muted-foreground hover:text-foreground hover:bg-muted">
             <Share className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={clearChat} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
+          <Button variant="ghost" size="sm" onClick={clearChat} className="text-muted-foreground hover:text-foreground hover:bg-muted">
             <Trash2 className="w-4 h-4" />
           </Button>
-          <div className="text-sm text-primary-foreground/80">
+          <div className="text-sm text-muted-foreground">
             {messages.filter(m => m.id !== 'welcome').length} messages
           </div>
         </div>
