@@ -147,21 +147,49 @@ export const EnhancedChatContainer = ({
     return `Chat ${new Date().toLocaleString()}`;
   };
   const handleSendMessage = async (text: string, files?: File[], mode?: 'thinking' | 'search' | 'normal') => {
-    // Handle file uploads
     let messageText = text;
+    let processedFiles: any[] = [];
+
+    // Handle file uploads with Puter AI integration
     if (files && files.length > 0) {
-      const fileDescriptions = files.map(file => `[File: ${file.name}]`).join(' ');
-      messageText = `${text} ${fileDescriptions}`.trim();
-      
-      // In a real app, you'd upload these files to a server
-      console.log('Files to process:', files);
+      for (const file of files) {
+        try {
+          if (file.type.startsWith('image/')) {
+            // Convert image to base64 for Puter AI
+            const imageUrl = URL.createObjectURL(file);
+            const imageDescription = await puterService.imageToText(imageUrl, `Describe this image in detail: ${file.name}`);
+            processedFiles.push({
+              type: 'text',
+              text: `[Image: ${file.name}] ${imageDescription}`
+            });
+            URL.revokeObjectURL(imageUrl);
+          } else {
+            // For other files, create file reference for Puter
+            processedFiles.push({
+              type: 'file',
+              puter_path: `~/uploads/${file.name}`, // Simulated path
+              text: `Please analyze this ${file.type} file: ${file.name}`
+            });
+          }
+        } catch (error) {
+          console.error('Error processing file:', file.name, error);
+          processedFiles.push({
+            type: 'text',
+            text: `[File: ${file.name} - Error processing file]`
+          });
+        }
+      }
+
+      // Add file descriptions to message
+      const fileDescriptions = processedFiles.map(f => f.text || `[File: ${f.puter_path}]`).join('\n');
+      messageText = `${text}\n\nFiles:\n${fileDescriptions}`.trim();
     }
 
     // Add mode context to message
     if (mode === 'thinking') {
-      messageText = `[Thinking Mode] ${messageText}`;
+      messageText = `[🧠 Thinking Mode] ${messageText}`;
     } else if (mode === 'search') {
-      messageText = `[Search Mode] ${messageText}`;
+      messageText = `[🔍 Search Mode] ${messageText}`;
     }
 
     const userMessage: Message = {
@@ -198,18 +226,32 @@ export const EnhancedChatContainer = ({
       // Adjust prompt based on mode
       let systemPrompt = '';
       if (mode === 'thinking') {
-        systemPrompt = 'Think step by step and explain your reasoning process. ';
+        systemPrompt = 'Think step by step and explain your reasoning process clearly. Show your thought process and analysis. ';
       } else if (mode === 'search') {
-        systemPrompt = 'Search for relevant information and provide comprehensive answers. ';
+        systemPrompt = 'Search for relevant information and provide comprehensive, well-researched answers with sources when possible. ';
       }
 
-      // Use Puter AI service
-      const responseText = await puterService.chat(systemPrompt + messageText, {
-        model: puterModel,
-        context: contextMessages,
-        max_tokens: 1000,
-        temperature: selectedModel.includes('reasoner') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
-      });
+      let responseText: string;
+
+      // Use appropriate method based on whether files are involved
+      if (processedFiles.length > 0) {
+        const content = [
+          { type: 'text', text: systemPrompt + text },
+          ...processedFiles
+        ];
+        responseText = await puterService.chatWithFiles(content, {
+          model: puterModel,
+          max_tokens: 1500,
+          temperature: selectedModel.includes('reasoner') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
+        });
+      } else {
+        responseText = await puterService.chat(systemPrompt + messageText, {
+          model: puterModel,
+          context: contextMessages,
+          max_tokens: 1000,
+          temperature: selectedModel.includes('reasoner') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
+        });
+      }
       
       console.log('Puter response received:', responseText);
 
@@ -236,7 +278,7 @@ export const EnhancedChatContainer = ({
       
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: `I apologize, but I'm unable to connect to the AI service at the moment. Please check that the Puter SDK is properly loaded and try again. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        text: `I apologize, but I'm unable to connect to the AI service at the moment. Please ensure the Puter SDK is properly loaded and try again.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTo use this app, you need to include the Puter SDK in your HTML.`,
         isUser: false,
         timestamp: new Date(),
         model: selectedModel
@@ -332,22 +374,32 @@ export const EnhancedChatContainer = ({
       copyChat(); // Fallback to copy
     }
   };
-  return <div className="flex flex-col h-full bg-background">
-      <div className="flex items-center justify-between p-3 bg-background border-b border-border">
+  return <div className="flex flex-col h-full bg-gradient-bg">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 bg-background/80 backdrop-blur-xl border-b border-border/30 shadow-card">
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-primary shadow-glow flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">Cosmic AI</h1>
+              <p className="text-xs text-muted-foreground">Advanced AI Assistant</p>
+            </div>
+          </div>
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
-            <SelectTrigger className="w-56 bg-background border-border text-foreground">
+            <SelectTrigger className="w-56 bg-background/50 backdrop-blur-sm border border-border/30 text-foreground shadow-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-background/95 backdrop-blur-xl border border-border/50">
               {Object.entries(modelCategories).map(([category, models]) => <div key={category}>
                   <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
                     {category}
                   </div>
-                  {models.map(model => <SelectItem key={model} value={model}>
+                  {models.map(model => <SelectItem key={model} value={model} className="hover:bg-accent/50">
                       <div className="flex items-center justify-between w-full">
                         <span>{modelDisplayNames[model as Model]}</span>
-                        {(model === 'deepseek-reasoner' || model === 'deepseek-chat' || model === 'gemini-2.0-flash') && <Badge variant="secondary" className="ml-2 text-xs">Live</Badge>}
+                        {(model === 'deepseek-reasoner' || model === 'deepseek-chat' || model === 'gemini-2.0-flash') && <Badge variant="secondary" className="ml-2 text-xs bg-primary/20 text-primary border-primary/30">Live</Badge>}
                       </div>
                     </SelectItem>)}
                 </div>)}
@@ -356,32 +408,33 @@ export const EnhancedChatContainer = ({
         </div>
         <div className="flex items-center gap-2">
           <VoiceSettings>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
               <Settings className="w-4 h-4" />
             </Button>
           </VoiceSettings>
-          <Button variant="ghost" size="sm" onClick={regenerateLastResponse} disabled={isStreaming || messages.filter(m => m.isUser).length === 0} className="text-muted-foreground hover:text-foreground hover:bg-muted">
+          <Button variant="ghost" size="sm" onClick={regenerateLastResponse} disabled={isStreaming || messages.filter(m => m.isUser).length === 0} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={copyChat} className="text-muted-foreground hover:text-foreground hover:bg-muted">
+          <Button variant="ghost" size="sm" onClick={copyChat} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
             <Copy className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={exportChat} className="text-muted-foreground hover:text-foreground hover:bg-muted">
+          <Button variant="ghost" size="sm" onClick={exportChat} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
             <Download className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={shareChat} className="text-muted-foreground hover:text-foreground hover:bg-muted">
+          <Button variant="ghost" size="sm" onClick={shareChat} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
             <Share className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={clearChat} className="text-muted-foreground hover:text-foreground hover:bg-muted">
+          <Button variant="ghost" size="sm" onClick={clearChat} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
             <Trash2 className="w-4 h-4" />
           </Button>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground bg-background/30 px-3 py-1 rounded-xl border border-border/30">
             {messages.filter(m => m.id !== 'welcome').length} messages
           </div>
         </div>
       </div>
       
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-6 bg-gradient-bg">
+      {/* Chat Area */}
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-6">
         <div className="space-y-6 max-w-4xl mx-auto">
           {messages.map(message => <ChatMessage key={message.id} message={message.text} isUser={message.isUser} timestamp={message.timestamp} model={message.model} />)}
           {isTyping && !isStreaming && <TypingIndicator />}
@@ -391,8 +444,11 @@ export const EnhancedChatContainer = ({
         </div>
       </ScrollArea>
 
-      <div className="p-4 bg-background border-t border-border">
-        <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
+      {/* Input Area */}
+      <div className="p-6 bg-background/30 backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto">
+          <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
+        </div>
       </div>
     </div>;
 };

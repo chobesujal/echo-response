@@ -163,17 +163,17 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
   };
 
   return (
-    <div className="flex flex-col gap-2 p-4 bg-background border-t border-border">
+    <div className="relative">
       {/* Attached Files */}
       {attachedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 p-3 bg-gradient-secondary rounded-t-2xl border border-border/50">
           {attachedFiles.map((file, index) => (
-            <div key={index} className="flex items-center gap-2 bg-muted px-3 py-1 rounded-full text-sm">
-              {file.type.startsWith('image/') ? <ImageIcon className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
-              <span className="truncate max-w-32">{file.name}</span>
+            <div key={index} className="flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-2 rounded-xl text-sm border border-border/30 shadow-message">
+              {file.type.startsWith('image/') ? <ImageIcon className="w-4 h-4 text-primary" /> : <FileText className="w-4 h-4 text-muted-foreground" />}
+              <span className="truncate max-w-32 text-foreground">{file.name}</span>
               <button
                 onClick={() => removeFile(index)}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground transition-colors ml-1"
               >
                 ×
               </button>
@@ -182,17 +182,21 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
         </div>
       )}
 
-      {/* Main Input Row */}
-      <div className="flex gap-2 items-end">
+      {/* Main Input Container */}
+      <div className={`flex items-center gap-3 p-4 bg-gradient-secondary backdrop-blur-xl border border-border/50 shadow-elegant ${attachedFiles.length > 0 ? 'rounded-b-2xl' : 'rounded-2xl'}`}>
         {/* Add Files Button */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="shrink-0">
-              <Plus className="w-4 h-4" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="shrink-0 w-10 h-10 rounded-xl bg-background/50 hover:bg-background/80 border border-border/30 shadow-sm transition-all duration-200 hover:shadow-message"
+            >
+              <Plus className="w-5 h-5 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+          <DropdownMenuContent className="bg-background/95 backdrop-blur-xl border border-border/50">
+            <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="hover:bg-accent/50">
               <Upload className="w-4 h-4 mr-2" />
               Upload File
             </DropdownMenuItem>
@@ -206,44 +210,52 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="How can I help you today?"
-            className="min-h-[44px] max-h-32 resize-none pr-24 bg-muted border-0"
+            className="min-h-[48px] max-h-32 resize-none pr-32 bg-background/50 border border-border/30 rounded-xl backdrop-blur-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
             disabled={disabled || isListening}
           />
           
-          {/* Mode Selector */}
-          <div className="absolute right-2 top-2 flex gap-1">
+          {/* Mode Selector & Voice Button */}
+          <div className="absolute right-2 top-2 flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 px-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-3 rounded-lg bg-background/50 hover:bg-background/80 border border-border/30 text-xs font-medium transition-all duration-200"
+                >
                   {getModeIcon()}
-                  <span className="ml-1 text-xs">{getModeLabel()}</span>
+                  <span className="ml-1">{getModeLabel()}</span>
                   <ChevronDown className="w-3 h-3 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setMode('thinking')}>
+              <DropdownMenuContent className="bg-background/95 backdrop-blur-xl border border-border/50">
+                <DropdownMenuItem onClick={() => setMode('thinking')} className="hover:bg-accent/50">
                   <Brain className="w-4 h-4 mr-2" />
                   Thinking
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setMode('search')}>
+                <DropdownMenuItem onClick={() => setMode('search')} className="hover:bg-accent/50">
                   <Search className="w-4 h-4 mr-2" />
                   Search
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Voice Chat Button */}
+            <Button 
+              variant={isListening ? "default" : "ghost"}
+              size="sm" 
+              className={`shrink-0 w-8 h-8 p-0 rounded-lg transition-all duration-300 ${
+                isListening 
+                  ? 'bg-gradient-primary text-primary-foreground shadow-glow animate-pulse-glow' 
+                  : 'bg-background/50 hover:bg-background/80 border border-border/30'
+              }`}
+              onClick={handleVoiceToggle}
+              disabled={disabled}
+            >
+              {isListening ? <Volume2 className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
           </div>
         </div>
-
-        {/* Voice Chat Button */}
-        <Button 
-          variant={isListening ? "default" : "ghost"}
-          size="sm" 
-          className={`shrink-0 rounded-full w-10 h-10 p-0 ${isListening ? 'bg-primary animate-pulse' : ''}`}
-          onClick={handleVoiceToggle}
-          disabled={disabled}
-        >
-          {isListening ? <Volume2 className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-        </Button>
       </div>
 
       {/* Hidden File Input */}
@@ -258,8 +270,11 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
 
       {/* Voice Status */}
       {isListening && (
-        <div className="text-sm text-muted-foreground text-center">
-          🎤 Listening... Speak now or click the microphone to stop
+        <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 bg-gradient-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium shadow-glow animate-fade-in">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-primary-foreground rounded-full animate-pulse"></div>
+            Listening... Speak now or click to stop
+          </div>
         </div>
       )}
     </div>

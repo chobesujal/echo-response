@@ -43,6 +43,52 @@ export class PuterService {
       throw error;
     }
   }
+
+  async imageToText(imageUrl: string, prompt?: string): Promise<string> {
+    if (!await this.isAvailable()) {
+      throw new Error('Puter SDK not available');
+    }
+    
+    try {
+      console.log('Processing image with Puter AI:', imageUrl);
+      const response = await (window as any).puter.ai.img2txt(imageUrl, prompt);
+      console.log('Puter AI image response:', response);
+      return this.extractResponseText(response);
+    } catch (error) {
+      console.error('Puter imageToText error:', error);
+      throw error;
+    }
+  }
+
+  async chatWithFiles(content: any[], options: PuterAIOptions = {}): Promise<string> {
+    if (!await this.isAvailable()) {
+      throw new Error('Puter SDK not available');
+    }
+    
+    const defaultOptions: PuterAIOptions = {
+      model: 'gpt-3.5-turbo',
+      max_tokens: 1500,
+      temperature: 0.7,
+      ...options
+    };
+    
+    try {
+      const messages = [
+        {
+          role: 'user',
+          content: content
+        }
+      ];
+
+      console.log('Sending files to Puter AI:', { messages, options: defaultOptions });
+      const response = await (window as any).puter.ai.chat(messages, defaultOptions);
+      console.log('Puter AI file response:', response);
+      return this.extractResponseText(response);
+    } catch (error) {
+      console.error('Puter chatWithFiles error:', error);
+      throw error;
+    }
+  }
   
   private extractResponseText(response: any): string {
     console.log('Extracting text from response:', response, 'Type:', typeof response);
