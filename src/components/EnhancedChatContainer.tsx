@@ -167,7 +167,8 @@ export const EnhancedChatContainer = ({
             // For other files, create file reference for Puter
             processedFiles.push({
               type: 'file',
-              puter_path: `~/uploads/${file.name}`, // Simulated path
+              puter_path: `~/uploads/${file.name}`,
+              // Simulated path
               text: `Please analyze this ${file.type} file: ${file.name}`
             });
           }
@@ -191,7 +192,6 @@ export const EnhancedChatContainer = ({
     } else if (mode === 'search') {
       messageText = `[🔍 Search Mode] ${messageText}`;
     }
-
     const userMessage: Message = {
       id: Date.now().toString(),
       text: messageText,
@@ -199,18 +199,15 @@ export const EnhancedChatContainer = ({
       timestamp: new Date(),
       model: selectedModel
     };
-    
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setIsStreaming(true);
     setStreamingText("");
-
     try {
       // Check if Puter is available
       if (typeof (window as any).puter === 'undefined' || typeof (window as any).puter.ai === 'undefined') {
         throw new Error('Puter SDK not available');
       }
-      
       console.log('Sending message to Puter:', messageText);
 
       // Prepare context messages for better responses
@@ -230,15 +227,14 @@ export const EnhancedChatContainer = ({
       } else if (mode === 'search') {
         systemPrompt = 'Search for relevant information and provide comprehensive, well-researched answers with sources when possible. ';
       }
-
       let responseText: string;
 
       // Use appropriate method based on whether files are involved
       if (processedFiles.length > 0) {
-        const content = [
-          { type: 'text', text: systemPrompt + text },
-          ...processedFiles
-        ];
+        const content = [{
+          type: 'text',
+          text: systemPrompt + text
+        }, ...processedFiles];
         responseText = await puterService.chatWithFiles(content, {
           model: puterModel,
           max_tokens: 1500,
@@ -252,12 +248,10 @@ export const EnhancedChatContainer = ({
           temperature: selectedModel.includes('reasoner') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
         });
       }
-      
       console.log('Puter response received:', responseText);
 
       // Simulate streaming for better UX
       await streamResponseRealTime(responseText);
-      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: responseText,
@@ -265,7 +259,6 @@ export const EnhancedChatContainer = ({
         timestamp: new Date(),
         model: selectedModel
       };
-      
       const finalMessages = [...updatedMessages, aiResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
@@ -275,7 +268,6 @@ export const EnhancedChatContainer = ({
       console.error('Puter AI Error:', error);
       setIsStreaming(false);
       setStreamingText("");
-      
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: `I apologize, but I'm unable to connect to the AI service at the moment. Please ensure the Puter SDK is properly loaded and try again.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTo use this app, you need to include the Puter SDK in your HTML.`,
@@ -283,11 +275,9 @@ export const EnhancedChatContainer = ({
         timestamp: new Date(),
         model: selectedModel
       };
-      
       const finalMessages = [...updatedMessages, errorResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
-      
       toast({
         title: "Connection Error",
         description: "Unable to connect to Puter AI service. Please try again.",
@@ -383,7 +373,7 @@ export const EnhancedChatContainer = ({
               <Sparkles className="w-4 h-4 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-foreground">Cosmic AI</h1>
+              <h1 className="font-semibold text-foreground text-xs">@sujalchobe</h1>
               <p className="text-xs text-muted-foreground">Advanced AI Assistant</p>
             </div>
           </div>
