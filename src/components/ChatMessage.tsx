@@ -37,7 +37,7 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
       isUser ? "justify-end" : "justify-start"
     )}>
       <div className={cn(
-        "max-w-[80%] px-4 py-3 rounded-2xl shadow-message",
+        "max-w-[90%] sm:max-w-[80%] px-4 py-3 rounded-2xl shadow-message",
         isUser 
           ? "bg-user-message text-user-message-foreground ml-12" 
           : "bg-ai-message text-ai-message-foreground mr-12"

@@ -195,7 +195,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
               <Plus className="w-5 h-5 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-background/95 backdrop-blur-xl border border-border/50">
+          <DropdownMenuContent className="bg-popover text-popover-foreground border border-border z-50">
             <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="hover:bg-accent/50">
               <Upload className="w-4 h-4 mr-2" />
               Upload File
@@ -228,7 +228,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
                   <ChevronDown className="w-3 h-3 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-background/95 backdrop-blur-xl border border-border/50">
+              <DropdownMenuContent className="bg-popover text-popover-foreground border border-border z-50">
                 <DropdownMenuItem onClick={() => setMode('thinking')} className="hover:bg-accent/50">
                   <Brain className="w-4 h-4 mr-2" />
                   Thinking

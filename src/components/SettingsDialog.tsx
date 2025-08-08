@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -40,7 +40,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   };
 
   const handleExportChats = () => {
-    const chats = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+    const chats = JSON.parse(localStorage.getItem('chat-history') || '[]');
     const dataStr = JSON.stringify(chats, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
@@ -63,7 +63,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         reader.onload = (e) => {
           try {
             const chats = JSON.parse(e.target?.result as string);
-            localStorage.setItem('chatHistory', JSON.stringify(chats));
+            localStorage.setItem('chat-history', JSON.stringify(chats));
             toast({ title: "Chats Imported", description: "Your chat history has been imported successfully." });
           } catch {
             toast({ title: "Error", description: "Invalid file format.", variant: "destructive" });
@@ -76,14 +76,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   };
 
   const handleArchiveAllChats = () => {
-    const chats = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+    const chats = JSON.parse(localStorage.getItem('chat-history') || '[]');
     const archivedChats = chats.map((chat: any) => ({ ...chat, archived: true }));
-    localStorage.setItem('chatHistory', JSON.stringify(archivedChats));
+    localStorage.setItem('chat-history', JSON.stringify(archivedChats));
     toast({ title: "All Chats Archived", description: "All conversations have been archived." });
   };
 
   const handleDeleteAllChats = () => {
-    localStorage.removeItem('chatHistory');
+    localStorage.removeItem('chat-history');
     localStorage.removeItem('currentChatId');
     toast({ title: "All Chats Deleted", description: "Your chat history has been cleared.", variant: "destructive" });
   };
@@ -103,6 +103,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <div className="w-64 bg-muted/30 p-4 border-r">
             <DialogHeader className="mb-4">
               <DialogTitle className="text-lg">Cosmic AI Settings</DialogTitle>
+              <DialogDescription>Configure preferences, theme, and chat management.</DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
               {tabs.map((tab) => {

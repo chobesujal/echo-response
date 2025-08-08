@@ -8,6 +8,7 @@ import { Copy, Play, Download, Eye, Code, Maximize2 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useToast } from "@/hooks/use-toast";
+import ReactMarkdown from "react-markdown";
 
 interface CodePreviewProps {
   code: string;
@@ -105,7 +106,9 @@ export const CodePreview = ({
       css: 'bg-purple-500',
       json: 'bg-gray-500',
       jsx: 'bg-cyan-500',
-      tsx: 'bg-indigo-500'
+      tsx: 'bg-indigo-500',
+      markdown: 'bg-slate-500',
+      md: 'bg-slate-500'
     };
     return colors[lang] || 'bg-gray-500';
   };
@@ -213,6 +216,18 @@ export const CodePreview = ({
                 className="w-full h-full border-0"
                 title="HTML Preview"
               />
+            ) : language === 'markdown' || language === 'md' ? (
+              <ScrollArea className="h-full">
+                <div className="p-4 prose dark:prose-invert max-w-none">
+                  <ReactMarkdown>{code}</ReactMarkdown>
+                </div>
+              </ScrollArea>
+            ) : language === 'json' ? (
+              <ScrollArea className="h-full">
+                <pre className="p-4 text-sm font-mono whitespace-pre-wrap text-foreground">
+                  {(() => { try { return JSON.stringify(JSON.parse(code), null, 2); } catch { return code; } })()}
+                </pre>
+              </ScrollArea>
             ) : (
               <div className="p-4 text-center text-muted-foreground">
                 <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />

@@ -69,10 +69,12 @@ export function Layout() {
         
         <div className="flex-1 flex flex-col h-screen relative">
           {/* Floating Settings Button */}
-          <div className="absolute top-4 right-4 z-10">
-            
-            <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-          </div>
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        <Button variant="secondary" size="icon" aria-label="Open settings" onClick={() => setSettingsOpen(true)} className="rounded-full shadow-card">
+          <Settings className="w-4 h-4" />
+        </Button>
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      </div>
           
           {/* Floating Sidebar Trigger for Mobile */}
           <div className="absolute top-4 left-4 z-10 lg:hidden">

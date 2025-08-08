@@ -150,12 +150,20 @@ export const EnhancedChatContainer = ({
     let messageText = text;
     let processedFiles: any[] = [];
 
-    // Handle file uploads with Puter AI integration
+    // Handle file uploads with Puter AI integration (robust client-side processing)
     if (files && files.length > 0) {
+      const readFileText = (file: File) =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
+
       for (const file of files) {
         try {
           if (file.type.startsWith('image/')) {
-            // Convert image to base64 for Puter AI
+            // Convert image to text via Puter
             const imageUrl = URL.createObjectURL(file);
             const imageDescription = await puterService.imageToText(imageUrl, `Describe this image in detail: ${file.name}`);
             processedFiles.push({
@@ -163,26 +171,35 @@ export const EnhancedChatContainer = ({
               text: `[Image: ${file.name}] ${imageDescription}`
             });
             URL.revokeObjectURL(imageUrl);
-          } else {
-            // For other files, create file reference for Puter
+          } else if (file.type.startsWith('text/') || file.type === 'application/json' || file.name.endsWith('.md')) {
+            // Inline the textual content for reliable processing
+            const content = await readFileText(file);
+            const preview = content.slice(0, 4000); // keep prompt small
             processedFiles.push({
-              type: 'file',
-              puter_path: `~/uploads/${file.name}`,
-              // Simulated path
-              text: `Please analyze this ${file.type} file: ${file.name}`
+              type: 'text',
+              text: `[File: ${file.name}]\n${preview}${content.length > 4000 ? '\n...[truncated]' : ''}`
             });
+          } else {
+            // Fallback for binary docs (pdf, docx, etc.) – provide metadata and a blob URL for reference
+            const blobUrl = URL.createObjectURL(file);
+            processedFiles.push({
+              type: 'text',
+              text: `[File: ${file.name} | ${file.type || 'unknown'} | ${Math.round(file.size/1024)}KB]\nReference URL: ${blobUrl}\nPlease summarize based on context; direct text extraction is not available client-side.`
+            });
+            // Revoke later (after request completes)
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
           }
         } catch (error) {
           console.error('Error processing file:', file.name, error);
           processedFiles.push({
             type: 'text',
-            text: `[File: ${file.name} - Error processing file]`
+            text: `[File: ${file.name} - error processing on client]`
           });
         }
       }
 
       // Add file descriptions to message
-      const fileDescriptions = processedFiles.map(f => f.text || `[File: ${f.puter_path}]`).join('\n');
+      const fileDescriptions = processedFiles.map(f => f.text).join('\n');
       messageText = `${text}\n\nFiles:\n${fileDescriptions}`.trim();
     }
 
@@ -381,7 +398,7 @@ export const EnhancedChatContainer = ({
             <SelectTrigger className="w-56 bg-background/50 backdrop-blur-sm border border-border/30 text-foreground shadow-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-background/95 backdrop-blur-xl border border-border/50">
+            <SelectContent className="bg-popover text-popover-foreground border border-border z-50">
               {Object.entries(modelCategories).map(([category, models]) => <div key={category}>
                   <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
                     {category}
@@ -424,7 +441,7 @@ export const EnhancedChatContainer = ({
       </div>
       
       {/* Chat Area */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-6">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-6">
         <div className="space-y-6 max-w-4xl mx-auto">
           {messages.map(message => <ChatMessage key={message.id} message={message.text} isUser={message.isUser} timestamp={message.timestamp} model={message.model} />)}
           {isTyping && !isStreaming && <TypingIndicator />}
@@ -435,7 +452,7 @@ export const EnhancedChatContainer = ({
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-6 bg-background/30 backdrop-blur-xl">
+      <div className="p-3 sm:p-6 bg-background/30 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto">
           <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
         </div>
