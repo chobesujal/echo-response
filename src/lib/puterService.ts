@@ -1,4 +1,4 @@
-// Puter AI service integration with all supported models
+// Puter AI service integration
 export interface PuterAIOptions {
   model?: string;
   context?: Array<{ role: string; content: string }>;
@@ -28,7 +28,7 @@ export class PuterService {
     }
     
     const defaultOptions: PuterAIOptions = {
-      model: 'gpt-4o-mini',
+      model: 'gpt-3.5-turbo',
       max_tokens: 1000,
       temperature: 0.7,
       ...options
@@ -66,7 +66,7 @@ export class PuterService {
     }
     
     const defaultOptions: PuterAIOptions = {
-      model: 'gpt-4o-mini',
+      model: 'gpt-3.5-turbo',
       max_tokens: 1500,
       temperature: 0.7,
       ...options
@@ -143,37 +143,31 @@ export class PuterService {
   
   getAvailableModels(): string[] {
     return [
-      // OpenAI Models
-      'gpt-4o',
       'gpt-4o-mini',
+      'gpt-4o',
       'gpt-4-turbo',
       'gpt-3.5-turbo',
-      
-      // Anthropic Models
       'claude-3-5-sonnet-20241022',
       'claude-3-5-haiku-20241022',
       'claude-3-opus-20240229',
-      
-      // Google Models
       'gemini-1.5-flash',
-      'gemini-1.5-pro',
-      'gemini-2.0-flash-exp',
-      
-      // DeepSeek Models
-      'deepseek-r1',
-      'deepseek-v3',
-      
-      // Meta Models
-      'llama-3.1-405b',
-      'llama-3.1-70b',
-      'llama-3.1-8b'
+      'gemini-1.5-pro'
     ];
   }
   
   mapModelName(modelId: string): string {
-    // Return the model ID as-is since we're now using the actual Puter model names
-    const supportedModels = this.getAvailableModels();
-    return supportedModels.includes(modelId) ? modelId : 'gpt-4o-mini';
+    const modelMap: Record<string, string> = {
+      'deepseek-reasoner': 'gpt-4o',
+      'deepseek-chat': 'gpt-4o-mini',
+      'gemini-2.0-flash': 'gemini-1.5-flash',
+      'claude-3-5-sonnet': 'claude-3-5-sonnet-20241022',
+      'claude-3-opus': 'claude-3-opus-20240229',
+      'gpt-4': 'gpt-4o',
+      'gpt-4-turbo': 'gpt-4-turbo',
+      'gpt-3.5-turbo': 'gpt-3.5-turbo'
+    };
+    
+    return modelMap[modelId] || 'gpt-4o-mini';
   }
 }
 

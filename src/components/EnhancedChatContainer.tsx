@@ -11,7 +11,6 @@ import { Trash2, RefreshCw, Copy, Download, Share, Sparkles, Settings } from "lu
 import { useToast } from "@/hooks/use-toast";
 import { puterService } from "@/lib/puterService";
 import { VoiceSettings } from "./VoiceSettings";
-
 interface Message {
   id: string;
   text: string;
@@ -19,7 +18,6 @@ interface Message {
   timestamp: Date;
   model?: string;
 }
-
 interface ChatSession {
   id: string;
   title: string;
@@ -27,55 +25,26 @@ interface ChatSession {
   timestamp: Date;
   messageCount: number;
 }
-
-type Model = 
-  | 'gpt-4o' 
-  | 'gpt-4o-mini' 
-  | 'gpt-4-turbo' 
-  | 'gpt-3.5-turbo'
-  | 'claude-3-5-sonnet-20241022'
-  | 'claude-3-5-haiku-20241022'
-  | 'claude-3-opus-20240229'
-  | 'gemini-1.5-flash'
-  | 'gemini-1.5-pro'
-  | 'gemini-2.0-flash-exp'
-  | 'deepseek-r1'
-  | 'deepseek-v3'
-  | 'llama-3.1-405b'
-  | 'llama-3.1-70b'
-  | 'llama-3.1-8b';
-
+type Model = 'deepseek-reasoner' | 'deepseek-chat' | 'gemini-2.0-flash' | 'claude-3-5-sonnet' | 'claude-3-opus' | 'gpt-4' | 'gpt-4-turbo' | 'gpt-3.5-turbo';
 const modelDisplayNames: Record<Model, string> = {
-  'gpt-4o': 'GPT-4o',
-  'gpt-4o-mini': 'GPT-4o Mini',
+  'deepseek-reasoner': 'DeepSeek R1 (Reasoning)',
+  'deepseek-chat': 'DeepSeek V3 (Chat)',
+  'gemini-2.0-flash': 'Gemini 2.0 Flash',
+  'claude-3-5-sonnet': 'Claude 3.5 Sonnet',
+  'claude-3-opus': 'Claude 3 Opus',
+  'gpt-4': 'GPT-4',
   'gpt-4-turbo': 'GPT-4 Turbo',
-  'gpt-3.5-turbo': 'GPT-3.5 Turbo',
-  'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-  'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
-  'claude-3-opus-20240229': 'Claude 3 Opus',
-  'gemini-1.5-flash': 'Gemini 1.5 Flash',
-  'gemini-1.5-pro': 'Gemini 1.5 Pro',
-  'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
-  'deepseek-r1': 'DeepSeek R1',
-  'deepseek-v3': 'DeepSeek V3',
-  'llama-3.1-405b': 'Llama 3.1 405B',
-  'llama-3.1-70b': 'Llama 3.1 70B',
-  'llama-3.1-8b': 'Llama 3.1 8B'
+  'gpt-3.5-turbo': 'GPT-3.5 Turbo'
 };
-
 const modelCategories = {
-  'OpenAI': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  'Anthropic': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
-  'Google': ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'],
-  'DeepSeek': ['deepseek-r1', 'deepseek-v3'],
-  'Meta': ['llama-3.1-405b', 'llama-3.1-70b', 'llama-3.1-8b']
+  'Premium Reasoning': ['deepseek-reasoner', 'claude-3-opus', 'gpt-4'],
+  'Fast & Efficient': ['deepseek-chat', 'gemini-2.0-flash', 'claude-3-5-sonnet', 'gpt-4-turbo'],
+  'Budget Friendly': ['gpt-3.5-turbo']
 };
-
 interface EnhancedChatContainerProps {
   currentChatId?: string;
   onChatUpdate?: (chatId: string, title: string, messageCount: number) => void;
 }
-
 export const EnhancedChatContainer = ({
   currentChatId,
   onChatUpdate
@@ -88,12 +57,13 @@ export const EnhancedChatContainer = ({
     model: 'system'
   }]);
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model>('gpt-4o-mini');
+  const [selectedModel, setSelectedModel] = useState<Model>('deepseek-reasoner');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
       const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -102,17 +72,14 @@ export const EnhancedChatContainer = ({
       }
     }
   };
-
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping, streamingText]);
-
   useEffect(() => {
     if (currentChatId) {
       loadChat(currentChatId);
     }
   }, [currentChatId]);
-
   const loadChat = (chatId: string) => {
     try {
       const savedChats = localStorage.getItem('chat-sessions');
@@ -136,7 +103,6 @@ export const EnhancedChatContainer = ({
       });
     }
   };
-
   const saveChat = (updatedMessages: Message[]) => {
     try {
       const chatSession: ChatSession = {
@@ -146,10 +112,8 @@ export const EnhancedChatContainer = ({
         timestamp: new Date(),
         messageCount: updatedMessages.filter(m => m.id !== 'welcome').length
       };
-
       const savedChats = localStorage.getItem('chat-sessions');
       let sessions: ChatSession[] = savedChats ? JSON.parse(savedChats) : [];
-      
       const existingIndex = sessions.findIndex(s => s.id === chatSession.id);
       if (existingIndex >= 0) {
         sessions[existingIndex] = chatSession;
@@ -174,7 +138,6 @@ export const EnhancedChatContainer = ({
       console.error('Error saving chat:', error);
     }
   };
-
   const generateChatTitle = (messages: Message[]): string => {
     const firstUserMessage = messages.find(m => m.isUser);
     if (firstUserMessage) {
@@ -183,12 +146,11 @@ export const EnhancedChatContainer = ({
     }
     return `Chat ${new Date().toLocaleString()}`;
   };
-
   const handleSendMessage = async (text: string, files?: File[], mode?: 'thinking' | 'search' | 'normal') => {
     let messageText = text;
     let processedFiles: any[] = [];
 
-    // Handle file uploads with Puter AI integration
+    // Handle file uploads with Puter AI integration (robust client-side processing)
     if (files && files.length > 0) {
       const readFileText = (file: File) =>
         new Promise<string>((resolve, reject) => {
@@ -218,7 +180,7 @@ export const EnhancedChatContainer = ({
               text: `[File: ${file.name}]\n${preview}${content.length > 4000 ? '\n...[truncated]' : ''}`
             });
           } else {
-            // Fallback for binary docs (pdf, docx, etc.)
+            // Fallback for binary docs (pdf, docx, etc.) – provide metadata and a blob URL for reference
             const blobUrl = URL.createObjectURL(file);
             processedFiles.push({
               type: 'text',
@@ -247,7 +209,6 @@ export const EnhancedChatContainer = ({
     } else if (mode === 'search') {
       messageText = `[🔍 Search Mode] ${messageText}`;
     }
-
     const userMessage: Message = {
       id: Date.now().toString(),
       text: messageText,
@@ -255,18 +216,15 @@ export const EnhancedChatContainer = ({
       timestamp: new Date(),
       model: selectedModel
     };
-
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setIsStreaming(true);
     setStreamingText("");
-
     try {
       // Check if Puter is available
       if (typeof (window as any).puter === 'undefined' || typeof (window as any).puter.ai === 'undefined') {
         throw new Error('Puter SDK not available');
       }
-
       console.log('Sending message to Puter:', messageText);
 
       // Prepare context messages for better responses
@@ -276,8 +234,8 @@ export const EnhancedChatContainer = ({
         content: msg.text
       }));
 
-      // Use the selected model directly
-      const puterModel = selectedModel;
+      // Map our model names to Puter-compatible models
+      const puterModel = puterService.mapModelName(selectedModel);
 
       // Adjust prompt based on mode
       let systemPrompt = '';
@@ -286,7 +244,6 @@ export const EnhancedChatContainer = ({
       } else if (mode === 'search') {
         systemPrompt = 'Search for relevant information and provide comprehensive, well-researched answers with sources when possible. ';
       }
-
       let responseText: string;
 
       // Use appropriate method based on whether files are involved
@@ -298,22 +255,20 @@ export const EnhancedChatContainer = ({
         responseText = await puterService.chatWithFiles(content, {
           model: puterModel,
           max_tokens: 1500,
-          temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
+          temperature: selectedModel.includes('reasoner') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
         });
       } else {
         responseText = await puterService.chat(systemPrompt + messageText, {
           model: puterModel,
           context: contextMessages,
           max_tokens: 1000,
-          temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
+          temperature: selectedModel.includes('reasoner') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
         });
       }
-
       console.log('Puter response received:', responseText);
 
-      // Simulate streaming for better UX with reduced lag
+      // Simulate streaming for better UX
       await streamResponseRealTime(responseText);
-
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: responseText,
@@ -321,7 +276,6 @@ export const EnhancedChatContainer = ({
         timestamp: new Date(),
         model: selectedModel
       };
-
       const finalMessages = [...updatedMessages, aiResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
@@ -331,7 +285,6 @@ export const EnhancedChatContainer = ({
       console.error('Puter AI Error:', error);
       setIsStreaming(false);
       setStreamingText("");
-
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
         text: `I apologize, but I'm unable to connect to the AI service at the moment. Please ensure the Puter SDK is properly loaded and try again.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTo use this app, you need to include the Puter SDK in your HTML.`,
@@ -339,11 +292,9 @@ export const EnhancedChatContainer = ({
         timestamp: new Date(),
         model: selectedModel
       };
-
       const finalMessages = [...updatedMessages, errorResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
-
       toast({
         title: "Connection Error",
         description: "Unable to connect to Puter AI service. Please try again.",
@@ -351,18 +302,13 @@ export const EnhancedChatContainer = ({
       });
     }
   };
-
   const streamResponseRealTime = async (text: string) => {
     const chars = text.split('');
-    const chunkSize = Math.max(1, Math.floor(chars.length / 50)); // Reduce lag by using larger chunks
-    
-    for (let i = 0; i < chars.length; i += chunkSize) {
-      const chunk = chars.slice(i, i + chunkSize).join('');
-      setStreamingText(prev => prev + chunk);
-      await new Promise(resolve => setTimeout(resolve, 10 + Math.random() * 20)); // Faster streaming
+    for (let i = 0; i < chars.length; i++) {
+      setStreamingText(chars.slice(0, i + 1).join(''));
+      await new Promise(resolve => setTimeout(resolve, 20 + Math.random() * 40));
     }
   };
-
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
@@ -374,11 +320,11 @@ export const EnhancedChatContainer = ({
     setMessages([welcomeMessage]);
     setStreamingText("");
   };
-
   const regenerateLastResponse = async () => {
     const lastUserMessage = [...messages].reverse().find(m => m.isUser);
     if (lastUserMessage) {
       // Remove last AI response
+      // Find last user message index
       let lastUserIndex = -1;
       for (let i = messages.length - 1; i >= 0; i--) {
         if (messages[i].isUser) {
@@ -393,18 +339,14 @@ export const EnhancedChatContainer = ({
       await handleSendMessage(lastUserMessage.text, [], 'normal');
     }
   };
-
   const copyChat = () => {
-    const chatText = messages.filter(m => m.id !== 'welcome').map(m => 
-      `${m.isUser ? 'You' : `AI (${m.model})`}: ${m.text}`
-    ).join('\n\n');
+    const chatText = messages.filter(m => m.id !== 'welcome').map(m => `${m.isUser ? 'You' : `AI (${m.model})`}: ${m.text}`).join('\n\n');
     navigator.clipboard.writeText(chatText);
     toast({
       title: "Chat copied",
       description: "Chat history has been copied to clipboard."
     });
   };
-
   const exportChat = () => {
     const chatData = {
       title: generateChatTitle(messages),
@@ -424,11 +366,8 @@ export const EnhancedChatContainer = ({
       description: "Chat has been downloaded as JSON file."
     });
   };
-
   const shareChat = async () => {
-    const chatText = messages.filter(m => m.id !== 'welcome').map(m => 
-      `${m.isUser ? 'You' : 'AI'}: ${m.text}`
-    ).join('\n\n');
+    const chatText = messages.filter(m => m.id !== 'welcome').map(m => `${m.isUser ? 'You' : 'AI'}: ${m.text}`).join('\n\n');
     if (navigator.share) {
       try {
         await navigator.share({
@@ -442,138 +381,81 @@ export const EnhancedChatContainer = ({
       copyChat(); // Fallback to copy
     }
   };
-
-  return (
-    <div className="flex flex-col h-full bg-gradient-bg">
-      {/* Header - Mobile optimized */}
-      <div className="flex items-center justify-between p-3 sm:p-4 bg-background/80 backdrop-blur-xl border-b border-border/30 shadow-card">
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-gradient-primary shadow-glow flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary-foreground" />
+  return <div className="flex flex-col h-full bg-gradient-bg">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 bg-background/80 backdrop-blur-xl border-b border-border/30 shadow-card">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-primary shadow-glow flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
             </div>
-            <div className="min-w-0 hidden sm:block">
+            <div>
               <h1 className="font-semibold text-foreground text-xs">@sujalchobe</h1>
               <p className="text-xs text-muted-foreground">Advanced AI Assistant</p>
             </div>
           </div>
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
-            <SelectTrigger className="w-32 sm:w-56 bg-background/50 backdrop-blur-sm border border-border/30 text-foreground shadow-sm text-xs sm:text-sm">
+            <SelectTrigger className="w-56 bg-background/50 backdrop-blur-sm border border-border/30 text-foreground shadow-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[300px] overflow-y-auto">
-              {Object.entries(modelCategories).map(([category, models]) => (
-                <div key={category}>
+            <SelectContent className="bg-popover text-popover-foreground border border-border z-50">
+              {Object.entries(modelCategories).map(([category, models]) => <div key={category}>
                   <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
                     {category}
                   </div>
-                  {models.map(model => (
-                    <SelectItem key={model} value={model} className="hover:bg-accent/50 text-xs sm:text-sm">
+                  {models.map(model => <SelectItem key={model} value={model} className="hover:bg-accent/50">
                       <div className="flex items-center justify-between w-full">
-                        <span className="truncate">{modelDisplayNames[model as Model]}</span>
-                        <Badge variant="secondary" className="ml-2 text-xs bg-primary/20 text-primary border-primary/30">Live</Badge>
+                        <span>{modelDisplayNames[model as Model]}</span>
+                        {(model === 'deepseek-reasoner' || model === 'deepseek-chat' || model === 'gemini-2.0-flash') && <Badge variant="secondary" className="ml-2 text-xs bg-primary/20 text-primary border-primary/30">Live</Badge>}
                       </div>
-                    </SelectItem>
-                  ))}
-                </div>
-              ))}
+                    </SelectItem>)}
+                </div>)}
             </SelectContent>
           </Select>
         </div>
-        
-        {/* Action buttons - Mobile optimized */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
           <VoiceSettings>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-9">
-              <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
+              <Settings className="w-4 h-4" />
             </Button>
           </VoiceSettings>
-          
-          {/* Desktop buttons */}
-          <div className="hidden sm:flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={regenerateLastResponse} 
-              disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
-              className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={copyChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200"
-            >
-              <Copy className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={exportChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={shareChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200"
-            >
-              <Share className="w-4 h-4" />
-            </Button>
-          </div>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={clearChat}
-            className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
-          >
-            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+          <Button variant="ghost" size="sm" onClick={regenerateLastResponse} disabled={isStreaming || messages.filter(m => m.isUser).length === 0} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
+            <RefreshCw className="w-4 h-4" />
           </Button>
-          
-          <div className="text-xs sm:text-sm text-muted-foreground bg-background/30 px-2 py-1 rounded-xl border border-border/30 hidden sm:block">
+          <Button variant="ghost" size="sm" onClick={copyChat} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
+            <Copy className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={exportChat} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={shareChat} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
+            <Share className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={clearChat} className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200">
+            <Trash2 className="w-4 h-4" />
+          </Button>
+          <div className="text-sm text-muted-foreground bg-background/30 px-3 py-1 rounded-xl border border-border/30">
             {messages.filter(m => m.id !== 'welcome').length} messages
           </div>
         </div>
       </div>
       
-      {/* Chat Area - Mobile optimized */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-2 sm:p-3 md:p-6">
-        <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
-          {messages.map(message => (
-            <ChatMessage 
-              key={message.id} 
-              message={message.text} 
-              isUser={message.isUser} 
-              timestamp={message.timestamp} 
-              model={message.model} 
-            />
-          ))}
+      {/* Chat Area */}
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-6">
+        <div className="space-y-6 max-w-4xl mx-auto">
+          {messages.map(message => <ChatMessage key={message.id} message={message.text} isUser={message.isUser} timestamp={message.timestamp} model={message.model} />)}
           {isTyping && !isStreaming && <TypingIndicator />}
-          {isStreaming && streamingText && (
-            <div className="animate-fade-in">
-              <ChatMessage 
-                message={streamingText} 
-                isUser={false} 
-                timestamp={new Date()} 
-                model={selectedModel} 
-                isStreaming={true} 
-              />
-            </div>
-          )}
+          {isStreaming && streamingText && <div className="animate-fade-in">
+              <ChatMessage message={streamingText} isUser={false} timestamp={new Date()} model={selectedModel} isStreaming={true} />
+            </div>}
         </div>
       </ScrollArea>
 
-      {/* Input Area - Mobile optimized */}
-      <div className="p-2 sm:p-3 md:p-6 bg-background/30 backdrop-blur-xl">
+      {/* Input Area */}
+      <div className="p-3 sm:p-6 bg-background/30 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto">
           <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
