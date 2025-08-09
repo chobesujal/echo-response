@@ -37,13 +37,13 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
       isUser ? "justify-end" : "justify-start"
     )}>
       <div className={cn(
-        "max-w-[90%] sm:max-w-[80%] px-4 py-3 rounded-2xl shadow-message",
+        "max-w-[85%] sm:max-w-[80%] px-3 sm:px-4 py-2 sm:py-3 rounded-2xl shadow-message",
         isUser 
-          ? "bg-user-message text-user-message-foreground ml-12" 
-          : "bg-ai-message text-ai-message-foreground mr-12"
+          ? "bg-user-message text-user-message-foreground ml-8 sm:ml-12" 
+          : "bg-ai-message text-ai-message-foreground mr-8 sm:mr-12"
       )}>
         {isUser ? (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{safeMessage}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{safeMessage}</p>
         ) : (
           <div className="bg-ai-message text-ai-message-foreground">
             {model && model !== 'system' && model !== 'error' && (
@@ -54,7 +54,7 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
             <div className={isStreaming ? 'animate-pulse' : ''}>
               <ReactMarkdown
                 components={{
-                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  p: ({ children }) => <p className="mb-2 last:mb-0 break-words">{children}</p>,
                   code: ({ className, children, ...props }) => {
                     const match = /language-(\w+)/.exec(className || '');
                     const language = match ? match[1] : '';
@@ -84,13 +84,13 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
                               variant="ghost"
                               size="sm"
                               onClick={() => copyToClipboard(codeContent)}
-                              className="h-8 w-8 p-0 bg-muted/80 hover:bg-muted text-muted-foreground"
+                              className="h-6 w-6 sm:h-8 sm:w-8 p-0 bg-muted/80 hover:bg-muted text-muted-foreground"
                               title="Copy code"
                             >
                               {copiedCode === codeContent ? (
-                                <Check className="w-3 h-3" />
+                                <Check className="w-2 h-2 sm:w-3 sm:h-3" />
                               ) : (
-                                <Copy className="w-3 h-3" />
+                                <Copy className="w-2 h-2 sm:w-3 sm:h-3" />
                               )}
                             </Button>
                           </div>
@@ -98,10 +98,11 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
                             style={oneDark as any}
                             language={language}
                             PreTag="div"
-                            className="rounded-md !mt-2 !mb-2"
+                            className="rounded-md !mt-2 !mb-2 text-xs sm:text-sm"
                             customStyle={{
-                              fontSize: '14px',
-                              lineHeight: '1.5'
+                              fontSize: window.innerWidth < 640 ? '12px' : '14px',
+                              lineHeight: '1.5',
+                              padding: window.innerWidth < 640 ? '8px' : '12px'
                             }}
                           >
                             {codeContent}
@@ -111,12 +112,37 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
                     }
                     
                     return (
-                      <code className="bg-muted px-2 py-1 rounded text-sm font-mono" {...props}>
+                      <code className="bg-muted px-1 sm:px-2 py-1 rounded text-xs sm:text-sm font-mono break-all" {...props}>
                         {children}
                       </code>
                     );
                   },
-                  pre: ({ children }) => <div className="my-2">{children}</div>
+                  pre: ({ children }) => <div className="my-2 overflow-x-auto">{children}</div>,
+                  // Handle long text and links
+                  a: ({ href, children }) => (
+                    <a 
+                      href={href} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-primary hover:underline break-all"
+                    >
+                      {children}
+                    </a>
+                  ),
+                  // Handle lists
+                  ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                  li: ({ children }) => <li className="break-words">{children}</li>,
+                  // Handle headings
+                  h1: ({ children }) => <h1 className="text-lg sm:text-xl font-bold mb-2 break-words">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-base sm:text-lg font-bold mb-2 break-words">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-sm sm:text-base font-bold mb-2 break-words">{children}</h3>,
+                  // Handle blockquotes
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-primary/30 pl-4 italic my-2 break-words">
+                      {children}
+                    </blockquote>
+                  ),
                 }}
               >
                 {safeMessage}
