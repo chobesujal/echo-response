@@ -147,7 +147,7 @@ export function AppSidebar({
 
   return (
     <Sidebar
-      className={collapsed ? "w-14" : "w-64"}
+      className={`${collapsed ? "w-14" : "w-64"} border-r border-border/30`}
       collapsible="icon"
     >
       <SidebarTrigger className="m-2 self-end" />
@@ -170,7 +170,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={onNewChat}
-                  className="w-full bg-gradient-primary text-primary-foreground hover:opacity-90"
+                  className="w-full bg-gradient-primary text-primary-foreground hover:opacity-90 tap-target"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   {!collapsed && <span>New Conversation</span>}
@@ -190,7 +190,7 @@ export function AppSidebar({
                   <div className={`group relative w-full ${currentChatId === chat.id ? 'bg-sidebar-accent rounded-md' : ''}`}>
                     <SidebarMenuButton 
                       onClick={() => onLoadChat(chat.id)}
-                      className="w-full justify-start pr-8"
+                      className="w-full justify-start pr-8 tap-target"
                     >
                       <div className="flex items-center min-w-0 flex-1">
                         <MessageSquare className="mr-2 h-4 w-4 shrink-0" />
@@ -209,7 +209,7 @@ export function AppSidebar({
                     {!collapsed && (
                       <button
                         onClick={(e) => handleDeleteChat(chat.id, e)}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 h-6 w-6 rounded hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-opacity"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 h-6 w-6 rounded hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-opacity tap-target"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -221,6 +221,29 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Import/Export Section */}
+        {!collapsed && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Data Management</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={exportChats} className="tap-target">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Chats
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={importChats} className="tap-target">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import Chats
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {/* User Profile and Settings */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
@@ -229,7 +252,7 @@ export function AppSidebar({
                 <div className="flex items-center justify-between w-full p-2">
                   <UserMenu />
                   {!collapsed && (
-                    <SidebarMenuButton onClick={onToggleDarkMode} className="ml-auto">
+                    <SidebarMenuButton onClick={onToggleDarkMode} className="ml-auto tap-target">
                       {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                     </SidebarMenuButton>
                   )}
