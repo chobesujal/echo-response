@@ -82,13 +82,13 @@ export const EnhancedChatContainer = ({
 }: EnhancedChatContainerProps) => {
   const [messages, setMessages] = useState<Message[]>([{
     id: "welcome",
-    text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our cosmic conversation! ✨",
+    text: "Hello! I'm Cosmic AI, your advanced AI assistant powered by multiple AI models. I can help with coding, writing, analysis, creative tasks, and much more. How can I assist you today?",
     isUser: false,
     timestamp: new Date(),
     model: 'system'
   }]);
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model>('gpt-4o-mini');
+  const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -276,8 +276,9 @@ export const EnhancedChatContainer = ({
         content: msg.text
       }));
 
-      // Use the selected model directly
-      const puterModel = selectedModel;
+      // Map to correct Puter model name
+      const puterModel = puterService.mapModelName(selectedModel);
+      console.log('Using Puter model:', puterModel);
 
       // Adjust prompt based on mode
       let systemPrompt = '';
@@ -444,24 +445,24 @@ export const EnhancedChatContainer = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-bg">
+    <div className="flex flex-col h-full bg-background">
       {/* Header - Mobile optimized */}
-      <div className="flex items-center justify-between p-3 sm:p-4 bg-background/80 backdrop-blur-xl border-b border-border/30 shadow-card">
+      <div className="flex items-center justify-between p-3 sm:p-4 bg-background border-b border-border/20">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-gradient-primary shadow-glow flex items-center justify-center flex-shrink-0">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary-foreground" />
             </div>
             <div className="min-w-0 hidden sm:block">
-              <h1 className="font-semibold text-foreground text-xs">@sujalchobe</h1>
-              <p className="text-xs text-muted-foreground">Advanced AI Assistant</p>
+              <h1 className="font-medium text-foreground text-sm">Cosmic AI</h1>
+              <p className="text-xs text-muted-foreground">Powered by multiple AI models</p>
             </div>
           </div>
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
-            <SelectTrigger className="w-32 sm:w-56 bg-background/50 backdrop-blur-sm border border-border/30 text-foreground shadow-sm text-xs sm:text-sm">
+            <SelectTrigger className="w-32 sm:w-48 bg-muted/50 border border-border/50 text-foreground text-xs sm:text-sm rounded-full">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[300px] overflow-y-auto">
+            <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[400px] overflow-y-auto rounded-xl">
               {Object.entries(modelCategories).map(([category, models]) => (
                 <div key={category}>
                   <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
@@ -471,7 +472,7 @@ export const EnhancedChatContainer = ({
                     <SelectItem key={model} value={model} className="hover:bg-accent/50 text-xs sm:text-sm">
                       <div className="flex items-center justify-between w-full">
                         <span className="truncate">{modelDisplayNames[model as Model]}</span>
-                        <Badge variant="secondary" className="ml-2 text-xs bg-primary/20 text-primary border-primary/30">Live</Badge>
+                        <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">Live</Badge>
                       </div>
                     </SelectItem>
                   ))}
@@ -484,7 +485,7 @@ export const EnhancedChatContainer = ({
         {/* Action buttons - Mobile optimized */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           <VoiceSettings>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-9">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-9">
               <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </VoiceSettings>
@@ -496,7 +497,7 @@ export const EnhancedChatContainer = ({
               size="sm" 
               onClick={regenerateLastResponse} 
               disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
-              className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
             >
               <RefreshCw className="w-4 h-4" />
             </Button>
@@ -504,7 +505,7 @@ export const EnhancedChatContainer = ({
               variant="ghost" 
               size="sm" 
               onClick={copyChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
             >
               <Copy className="w-4 h-4" />
             </Button>
@@ -512,7 +513,7 @@ export const EnhancedChatContainer = ({
               variant="ghost" 
               size="sm" 
               onClick={exportChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
             >
               <Download className="w-4 h-4" />
             </Button>
@@ -520,7 +521,7 @@ export const EnhancedChatContainer = ({
               variant="ghost" 
               size="sm" 
               onClick={shareChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
             >
               <Share className="w-4 h-4" />
             </Button>
@@ -530,20 +531,20 @@ export const EnhancedChatContainer = ({
             variant="ghost" 
             size="sm" 
             onClick={clearChat}
-            className="text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-xl transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
           >
             <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           
-          <div className="text-xs sm:text-sm text-muted-foreground bg-background/30 px-2 py-1 rounded-xl border border-border/30 hidden sm:block">
+          <div className="text-xs sm:text-sm text-muted-foreground bg-muted/30 px-2 py-1 rounded-full border border-border/30 hidden sm:block">
             {messages.filter(m => m.id !== 'welcome').length} messages
           </div>
         </div>
       </div>
       
       {/* Chat Area - Mobile optimized */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-2 sm:p-3 md:p-6">
-        <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-4 md:p-6">
+        <div className="space-y-6 max-w-3xl mx-auto">
           {messages.map(message => (
             <ChatMessage 
               key={message.id} 
@@ -569,8 +570,8 @@ export const EnhancedChatContainer = ({
       </ScrollArea>
 
       {/* Input Area - Mobile optimized */}
-      <div className="p-2 sm:p-3 md:p-6 bg-background/30 backdrop-blur-xl">
-        <div className="max-w-4xl mx-auto">
+      <div className="p-3 sm:p-4 md:p-6 bg-background border-t border-border/20">
+        <div className="max-w-3xl mx-auto">
           <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
         </div>
       </div>

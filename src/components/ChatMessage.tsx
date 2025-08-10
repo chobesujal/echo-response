@@ -37,18 +37,18 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
       isUser ? "justify-end" : "justify-start"
     )}>
       <div className={cn(
-        "max-w-[85%] sm:max-w-[80%] px-3 sm:px-4 py-2 sm:py-3 rounded-2xl shadow-message",
+        "max-w-[85%] sm:max-w-[75%] px-4 py-3 rounded-3xl",
         isUser 
-          ? "bg-user-message text-user-message-foreground ml-8 sm:ml-12" 
-          : "bg-ai-message text-ai-message-foreground mr-8 sm:mr-12"
+          ? "bg-blue-600 text-white ml-8 sm:ml-16" 
+          : "bg-muted text-foreground mr-8 sm:mr-16"
       )}>
         {isUser ? (
           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{safeMessage}</p>
         ) : (
-          <div className="bg-ai-message text-ai-message-foreground">
+          <div>
             {model && model !== 'system' && model !== 'error' && (
-              <div className="text-xs text-muted-foreground mb-2 opacity-70">
-                {model}
+              <div className="text-xs text-muted-foreground mb-2 opacity-80 font-medium">
+                {modelDisplayNames[model as keyof typeof modelDisplayNames] || model}
               </div>
             )}
             <div className={isStreaming ? 'animate-pulse' : ''}>

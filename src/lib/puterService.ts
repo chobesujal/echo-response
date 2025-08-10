@@ -171,9 +171,35 @@ export class PuterService {
   }
   
   mapModelName(modelId: string): string {
-    // Return the model ID as-is since we're now using the actual Puter model names
-    const supportedModels = this.getAvailableModels();
-    return supportedModels.includes(modelId) ? modelId : 'gpt-4o-mini';
+    // Map to exact Puter model names
+    const modelMap: Record<string, string> = {
+      // OpenAI
+      'gpt-4o': 'gpt-4o',
+      'gpt-4o-mini': 'gpt-4o-mini',
+      'gpt-4-turbo': 'gpt-4-turbo',
+      'gpt-3.5-turbo': 'gpt-3.5-turbo',
+      
+      // Anthropic
+      'claude-3-5-sonnet-20241022': 'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022': 'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229': 'claude-3-opus-20240229',
+      
+      // Google
+      'gemini-1.5-flash': 'gemini-1.5-flash',
+      'gemini-1.5-pro': 'gemini-1.5-pro',
+      'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
+      
+      // DeepSeek
+      'deepseek-r1': 'deepseek-r1',
+      'deepseek-v3': 'deepseek-v3',
+      
+      // Meta
+      'llama-3.1-405b': 'llama-3.1-405b',
+      'llama-3.1-70b': 'llama-3.1-70b',
+      'llama-3.1-8b': 'llama-3.1-8b'
+    };
+    
+    return modelMap[modelId] || 'deepseek-v3';
   }
 }
 

@@ -69,7 +69,7 @@ export function Layout() {
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="min-h-screen flex w-full bg-gradient-bg">
+      <div className="min-h-screen flex w-full bg-background">
         {/* Sidebar - Hidden on mobile by default */}
         <div className="hidden lg:block">
           <AppSidebar 
@@ -102,7 +102,7 @@ export function Layout() {
               size="icon" 
               aria-label="Open settings" 
               onClick={() => setSettingsOpen(true)} 
-              className="rounded-full shadow-card h-8 w-8 sm:h-10 sm:w-10"
+              className="rounded-full bg-muted/80 backdrop-blur-sm border border-border/30 h-8 w-8 sm:h-10 sm:w-10"
             >
               <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
@@ -111,7 +111,7 @@ export function Layout() {
           
           {/* Floating Sidebar Trigger for Mobile */}
           <div className="absolute top-3 left-3 z-10 lg:hidden">
-            <SidebarTrigger className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm border border-border/30 shadow-card" />
+            <SidebarTrigger className="h-8 w-8 rounded-full bg-muted/80 backdrop-blur-sm border border-border/30" />
           </div>
 
           {/* Main Content - Full Screen Chat */}

@@ -17,7 +17,7 @@ All colors MUST be HSL.
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 250 85% 60%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 3.7% 15.9%;
@@ -34,26 +34,14 @@ All colors MUST be HSL.
 
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 250 85% 60%;
+    --ring: 217 91% 60%;
 
     /* Chat-specific colors */
-    --user-message: 250 85% 60%;
+    --user-message: 217 91% 60%;
     --user-message-foreground: 0 0% 100%;
     --ai-message: 0 0% 100%;
     --ai-message-foreground: 210 20% 15%;
     
-    /* Gradients */
-    --gradient-bg: linear-gradient(135deg, hsl(245 40% 98%) 0%, hsl(250 30% 96%) 100%);
-    --gradient-primary: linear-gradient(135deg, hsl(250 85% 60%) 0%, hsl(260 85% 65%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(240 10% 96%) 0%, hsl(245 15% 94%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(250 100% 95%) 0%, hsl(255 90% 97%) 100%);
-    
-    /* Shadows */
-    --shadow-message: 0 2px 8px hsl(250 20% 80% / 0.15);
-    --shadow-card: 0 4px 20px hsl(250 20% 70% / 0.1);
-    --shadow-elegant: 0 10px 30px -10px hsl(250 85% 60% / 0.3);
-    --shadow-glow: 0 0 40px hsl(250 85% 65% / 0.4);
-
     --radius: 0.5rem;
 
     --sidebar-background: 240 10% 3.9%;
@@ -63,64 +51,52 @@ All colors MUST be HSL.
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 217 91% 60%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 0 0% 3.9%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 0 0% 3.9%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 0 0% 3.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 250 85% 60%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 0 0% 14.9%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
 
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 0 0% 14.9%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 250 85% 60%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 217 91% 60%;
 
     /* Chat-specific colors - dark mode */
-    --user-message: 250 85% 60%;
+    --user-message: 217 91% 60%;
     --user-message-foreground: 0 0% 100%;
-    --ai-message: 217.2 32.6% 17.5%;
+    --ai-message: 0 0% 14.9%;
     --ai-message-foreground: 210 40% 98%;
-    
-    /* Gradients - dark mode */
-    --gradient-bg: linear-gradient(135deg, hsl(220 15% 8%) 0%, hsl(220 20% 12%) 100%);
-    --gradient-primary: linear-gradient(135deg, hsl(260 85% 65%) 0%, hsl(280 90% 70%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(220 15% 15%) 0%, hsl(220 20% 18%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(220 15% 15%) 0%, hsl(225 20% 20%) 100%);
-    
-    /* Shadows - dark mode */
-    --shadow-message: 0 2px 8px hsl(0 0% 0% / 0.4);
-    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.5);
-    --shadow-elegant: 0 10px 30px -10px hsl(260 85% 65% / 0.4);
-    --shadow-glow: 0 0 40px hsl(260 85% 70% / 0.5);
 
-    --sidebar-background: 220 15% 8%;
+    --sidebar-background: 0 0% 3.9%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 260 85% 65%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 12%;
+    --sidebar-accent: 0 0% 14.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 220 15% 15%;
-    --sidebar-ring: 260 85% 65%;
+    --sidebar-border: 0 0% 14.9%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 

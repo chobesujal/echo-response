@@ -203,19 +203,19 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
       )}
 
       {/* Main Input Container */}
-      <div className={`flex items-end gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-secondary backdrop-blur-xl border border-border/50 shadow-elegant ${attachedFiles.length > 0 ? 'rounded-b-2xl' : 'rounded-2xl'}`}>
+      <div className={`flex items-end gap-2 sm:gap-3 p-3 sm:p-4 bg-muted/30 border border-border/50 ${attachedFiles.length > 0 ? 'rounded-b-3xl' : 'rounded-3xl'}`}>
         {/* Add Files Button */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 
               variant="ghost" 
               size="sm" 
-              className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-background/50 hover:bg-background/80 border border-border/30 shadow-sm transition-all duration-200 hover:shadow-message p-0"
+              className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 hover:bg-background/80 border border-border/30 transition-all duration-200 p-0"
             >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-popover text-popover-foreground border border-border z-50">
+          <DropdownMenuContent className="bg-popover text-popover-foreground border border-border z-50 rounded-xl">
             <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="hover:bg-accent/50">
               <Upload className="w-4 h-4 mr-2" />
               Upload File
@@ -231,7 +231,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
             placeholder="How can I help you today?"
-            className="min-h-[44px] max-h-[120px] resize-none pr-20 sm:pr-32 bg-background/50 border border-border/30 rounded-xl backdrop-blur-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200 text-sm sm:text-base"
+            className="min-h-[44px] max-h-[120px] resize-none pr-20 sm:pr-32 bg-background border-0 rounded-3xl text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none transition-all duration-200 text-sm sm:text-base"
             disabled={disabled || isListening}
             rows={1}
           />
@@ -243,14 +243,14 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-6 sm:h-8 px-2 sm:px-3 rounded-lg bg-background/50 hover:bg-background/80 border border-border/30 text-xs font-medium transition-all duration-200"
+                  className="h-6 sm:h-8 px-2 sm:px-3 rounded-full bg-muted/50 hover:bg-muted/80 text-xs font-medium transition-all duration-200"
                 >
                   {getModeIcon()}
                   <span className="ml-1 hidden sm:inline">{getModeLabel()}</span>
                   <ChevronDown className="w-2 h-2 sm:w-3 sm:h-3 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-popover text-popover-foreground border border-border z-50">
+              <DropdownMenuContent className="bg-popover text-popover-foreground border border-border z-50 rounded-xl">
                 <DropdownMenuItem onClick={() => setMode('normal')} className="hover:bg-accent/50">
                   <Brain className="w-4 h-4 mr-2" />
                   Normal
@@ -272,8 +272,8 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
               size="sm" 
               className={`shrink-0 w-6 h-6 sm:w-8 sm:h-8 p-0 rounded-lg transition-all duration-300 ${
                 isListening 
-                  ? 'bg-gradient-primary text-primary-foreground shadow-glow animate-pulse-glow' 
-                  : 'bg-background/50 hover:bg-background/80 border border-border/30'
+                  ? 'bg-blue-600 text-white animate-pulse' 
+                  : 'bg-muted/50 hover:bg-muted/80'
               }`}
               onClick={handleVoiceToggle}
               disabled={disabled}
@@ -288,7 +288,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
           onClick={handleSend} 
           disabled={(!message.trim() && attachedFiles.length === 0) || disabled}
           size="sm"
-          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-xl bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>

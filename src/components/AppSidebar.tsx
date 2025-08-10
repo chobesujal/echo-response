@@ -157,7 +157,9 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupContent>
             <div className="flex items-center gap-2 px-2 py-3 border-b border-sidebar-border">
-              <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+              <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                <Sparkles className="w-3 h-3 text-white" />
+              </div>
               {!collapsed && <h2 className="text-lg font-semibold text-sidebar-foreground">Cosmic AI</h2>}
             </div>
           </SidebarGroupContent>
@@ -170,7 +172,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={onNewChat}
-                  className="w-full bg-gradient-primary text-primary-foreground hover:opacity-90 tap-target"
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700 tap-target"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   {!collapsed && <span>New Conversation</span>}
