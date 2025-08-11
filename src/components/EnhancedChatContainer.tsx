@@ -2,12 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "./ChatMessage";
 import { EnhancedChatInput } from "./EnhancedChatInput";
 import { TypingIndicator } from "./TypingIndicator";
-import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, RefreshCw, Copy, Download, Share, Sparkles, Settings } from "lucide-react";
+import { Trash2, RefreshCw, Copy, Download, Share, Sparkles, Settings, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { puterService } from "@/lib/puterService";
 import { VoiceSettings } from "./VoiceSettings";
@@ -91,6 +90,7 @@ export const EnhancedChatContainer = ({
   const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -98,7 +98,9 @@ export const EnhancedChatContainer = ({
     if (scrollAreaRef.current) {
       const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (scrollElement) {
-        scrollElement.scrollTop = scrollElement.scrollHeight;
+        setTimeout(() => {
+          scrollElement.scrollTop = scrollElement.scrollHeight;
+        }, 50);
       }
     }
   };
@@ -157,11 +159,9 @@ export const EnhancedChatContainer = ({
         sessions.unshift(chatSession);
       }
 
-      // Keep only last 50 sessions
       sessions = sessions.slice(0, 50);
       localStorage.setItem('chat-sessions', JSON.stringify(sessions));
 
-      // Update chat history in sidebar
       const historyItems = sessions.map(s => ({
         id: s.id,
         title: s.title,
@@ -185,10 +185,12 @@ export const EnhancedChatContainer = ({
   };
 
   const handleSendMessage = async (text: string, files?: File[], mode?: 'thinking' | 'search' | 'normal') => {
+    if (!text.trim() && (!files || files.length === 0)) return;
+
     let messageText = text;
     let processedFiles: any[] = [];
 
-    // Handle file uploads with Puter AI integration
+    // Handle file uploads
     if (files && files.length > 0) {
       const readFileText = (file: File) =>
         new Promise<string>((resolve, reject) => {
@@ -201,56 +203,58 @@ export const EnhancedChatContainer = ({
       for (const file of files) {
         try {
           if (file.type.startsWith('image/')) {
-            // Convert image to text via Puter
             const imageUrl = URL.createObjectURL(file);
-            const imageDescription = await puterService.imageToText(imageUrl, `Describe this image in detail: ${file.name}`);
-            processedFiles.push({
-              type: 'text',
-              text: `[Image: ${file.name}] ${imageDescription}`
-            });
+            try {
+              const imageDescription = await puterService.imageToText(imageUrl, `Describe this image in detail: ${file.name}`);
+              processedFiles.push({
+                type: 'text',
+                text: `[Image: ${file.name}] ${imageDescription}`
+              });
+            } catch (error) {
+              processedFiles.push({
+                type: 'text',
+                text: `[Image: ${file.name}] - Unable to process image`
+              });
+            }
             URL.revokeObjectURL(imageUrl);
           } else if (file.type.startsWith('text/') || file.type === 'application/json' || file.name.endsWith('.md')) {
-            // Inline the textual content for reliable processing
             const content = await readFileText(file);
-            const preview = content.slice(0, 4000); // keep prompt small
+            const preview = content.slice(0, 4000);
             processedFiles.push({
               type: 'text',
               text: `[File: ${file.name}]\n${preview}${content.length > 4000 ? '\n...[truncated]' : ''}`
             });
           } else {
-            // Fallback for binary docs (pdf, docx, etc.)
-            const blobUrl = URL.createObjectURL(file);
             processedFiles.push({
               type: 'text',
-              text: `[File: ${file.name} | ${file.type || 'unknown'} | ${Math.round(file.size/1024)}KB]\nReference URL: ${blobUrl}\nPlease summarize based on context; direct text extraction is not available client-side.`
+              text: `[File: ${file.name} | ${file.type || 'unknown'} | ${Math.round(file.size/1024)}KB]\nFile uploaded but content extraction not available for this file type.`
             });
-            // Revoke later (after request completes)
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
           }
         } catch (error) {
           console.error('Error processing file:', file.name, error);
           processedFiles.push({
             type: 'text',
-            text: `[File: ${file.name} - error processing on client]`
+            text: `[File: ${file.name} - error processing]`
           });
         }
       }
 
-      // Add file descriptions to message
-      const fileDescriptions = processedFiles.map(f => f.text).join('\n');
-      messageText = `${text}\n\nFiles:\n${fileDescriptions}`.trim();
+      if (processedFiles.length > 0) {
+        const fileDescriptions = processedFiles.map(f => f.text).join('\n');
+        messageText = `${text}\n\nFiles:\n${fileDescriptions}`.trim();
+      }
     }
 
-    // Add mode context to message
+    // Add mode context
     if (mode === 'thinking') {
-      messageText = `[🧠 Thinking Mode] ${messageText}`;
+      messageText = `[🧠 Thinking Mode] Please think step by step and show your reasoning process.\n\n${messageText}`;
     } else if (mode === 'search') {
-      messageText = `[🔍 Search Mode] ${messageText}`;
+      messageText = `[🔍 Search Mode] Please provide comprehensive, well-researched information.\n\n${messageText}`;
     }
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: messageText,
+      text: text, // Store original text without file descriptions for display
       isUser: true,
       timestamp: new Date(),
       model: selectedModel
@@ -260,37 +264,39 @@ export const EnhancedChatContainer = ({
     setMessages(updatedMessages);
     setIsStreaming(true);
     setStreamingText("");
+    
+    // Create streaming message
+    const streamingId = (Date.now() + 1).toString();
+    setStreamingMessageId(streamingId);
 
     try {
-      // Check if Puter is available
+      console.log('Sending message to Puter AI:', messageText);
+      console.log('Selected model:', selectedModel);
+
+      // Check Puter availability
       if (typeof (window as any).puter === 'undefined' || typeof (window as any).puter.ai === 'undefined') {
-        throw new Error('Puter SDK not available');
+        throw new Error('Puter SDK not available. Please ensure the Puter SDK is loaded.');
       }
 
-      console.log('Sending message to Puter:', messageText);
-
-      // Prepare context messages for better responses
+      // Prepare context
       const recentMessages = updatedMessages.slice(-5).filter(msg => msg.id !== 'welcome');
       const contextMessages = recentMessages.map(msg => ({
         role: msg.isUser ? 'user' : 'assistant',
         content: msg.text
       }));
 
-      // Map to correct Puter model name
       const puterModel = puterService.mapModelName(selectedModel);
       console.log('Using Puter model:', puterModel);
 
-      // Adjust prompt based on mode
       let systemPrompt = '';
       if (mode === 'thinking') {
         systemPrompt = 'Think step by step and explain your reasoning process clearly. Show your thought process and analysis. ';
       } else if (mode === 'search') {
-        systemPrompt = 'Search for relevant information and provide comprehensive, well-researched answers with sources when possible. ';
+        systemPrompt = 'Search for relevant information and provide comprehensive, well-researched answers. ';
       }
 
       let responseText: string;
 
-      // Use appropriate method based on whether files are involved
       if (processedFiles.length > 0) {
         const content = [{
           type: 'text',
@@ -298,25 +304,25 @@ export const EnhancedChatContainer = ({
         }, ...processedFiles];
         responseText = await puterService.chatWithFiles(content, {
           model: puterModel,
-          max_tokens: 1500,
+          max_tokens: 2000,
           temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
         });
       } else {
         responseText = await puterService.chat(systemPrompt + messageText, {
           model: puterModel,
           context: contextMessages,
-          max_tokens: 1000,
+          max_tokens: 1500,
           temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
         });
       }
 
       console.log('Puter response received:', responseText);
 
-      // Simulate streaming for better UX with reduced lag
-      await streamResponseRealTime(responseText);
+      // Stream the response
+      await streamResponseText(responseText);
 
       const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
+        id: streamingId,
         text: responseText,
         isUser: false,
         timestamp: new Date(),
@@ -326,19 +332,17 @@ export const EnhancedChatContainer = ({
       const finalMessages = [...updatedMessages, aiResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
-      setIsStreaming(false);
-      setStreamingText("");
+      
     } catch (error) {
       console.error('Puter AI Error:', error);
-      setIsStreaming(false);
-      setStreamingText("");
-
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       const errorResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: `I apologize, but I'm unable to connect to the AI service at the moment. Please ensure the Puter SDK is properly loaded and try again.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTo use this app, you need to include the Puter SDK in your HTML.`,
+        id: streamingId,
+        text: `I apologize, but I'm unable to process your request at the moment. \n\nError: ${errorMessage}\n\nPlease try again or check if the Puter SDK is properly loaded.`,
         isUser: false,
         timestamp: new Date(),
-        model: selectedModel
+        model: 'error'
       };
 
       const finalMessages = [...updatedMessages, errorResponse];
@@ -347,39 +351,44 @@ export const EnhancedChatContainer = ({
 
       toast({
         title: "Connection Error",
-        description: "Unable to connect to Puter AI service. Please try again.",
+        description: "Unable to connect to AI service. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsStreaming(false);
+      setStreamingText("");
+      setStreamingMessageId(null);
     }
   };
 
-  const streamResponseRealTime = async (text: string) => {
-    const chars = text.split('');
-    const chunkSize = Math.max(1, Math.floor(chars.length / 50)); // Reduce lag by using larger chunks
+  const streamResponseText = async (text: string) => {
+    const words = text.split(' ');
+    const chunkSize = Math.max(1, Math.floor(words.length / 30));
     
-    for (let i = 0; i < chars.length; i += chunkSize) {
-      const chunk = chars.slice(i, i + chunkSize).join('');
+    for (let i = 0; i < words.length; i += chunkSize) {
+      const chunk = words.slice(i, i + chunkSize).join(' ') + ' ';
       setStreamingText(prev => prev + chunk);
-      await new Promise(resolve => setTimeout(resolve, 10 + Math.random() * 20)); // Faster streaming
+      await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 30));
     }
   };
 
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
-      text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our cosmic conversation! ✨",
+      text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
     };
     setMessages([welcomeMessage]);
     setStreamingText("");
+    setIsStreaming(false);
+    setStreamingMessageId(null);
   };
 
   const regenerateLastResponse = async () => {
     const lastUserMessage = [...messages].reverse().find(m => m.isUser);
-    if (lastUserMessage) {
-      // Remove last AI response
+    if (lastUserMessage && !isStreaming) {
       let lastUserIndex = -1;
       for (let i = messages.length - 1; i >= 0; i--) {
         if (messages[i].isUser) {
@@ -389,15 +398,13 @@ export const EnhancedChatContainer = ({
       }
       const messagesUpToLastUser = messages.slice(0, lastUserIndex + 1);
       setMessages(messagesUpToLastUser);
-
-      // Regenerate response
       await handleSendMessage(lastUserMessage.text, [], 'normal');
     }
   };
 
   const copyChat = () => {
     const chatText = messages.filter(m => m.id !== 'welcome').map(m => 
-      `${m.isUser ? 'You' : `AI (${m.model})`}: ${m.text}`
+      `${m.isUser ? 'You' : `AI (${modelDisplayNames[m.model as Model] || m.model})`}: ${m.text}`
     ).join('\n\n');
     navigator.clipboard.writeText(chatText);
     toast({
@@ -415,7 +422,7 @@ export const EnhancedChatContainer = ({
     };
     const dataStr = JSON.stringify(chatData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    const exportFileDefaultName = `chat-${Date.now()}.json`;
+    const exportFileDefaultName = `cosmic-ai-chat-${Date.now()}.json`;
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
@@ -433,46 +440,49 @@ export const EnhancedChatContainer = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'AI Chat Conversation',
+          title: 'Cosmic AI Chat Conversation',
           text: chatText
         });
       } catch (error) {
-        copyChat(); // Fallback to copy
+        copyChat();
       }
     } else {
-      copyChat(); // Fallback to copy
+      copyChat();
     }
   };
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header - Mobile optimized */}
-      <div className="flex items-center justify-between p-3 sm:p-4 bg-background border-b border-border/20">
+      {/* Header */}
+      <div className="flex items-center justify-between p-3 sm:p-4 bg-background/95 backdrop-blur-sm border-b border-border/20 sticky top-0 z-10">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary-foreground" />
+              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
             </div>
             <div className="min-w-0 hidden sm:block">
-              <h1 className="font-medium text-foreground text-sm">Cosmic AI</h1>
-              <p className="text-xs text-muted-foreground">Powered by multiple AI models</p>
+              <h1 className="font-semibold text-foreground text-sm">Cosmic AI</h1>
+              <p className="text-xs text-muted-foreground">Advanced AI Assistant</p>
             </div>
           </div>
+          
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
-            <SelectTrigger className="w-32 sm:w-48 bg-muted/50 border border-border/50 text-foreground text-xs sm:text-sm rounded-full">
+            <SelectTrigger className="w-32 sm:w-48 bg-muted/50 border border-border/50 text-foreground text-xs sm:text-sm rounded-lg">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[400px] overflow-y-auto rounded-xl">
               {Object.entries(modelCategories).map(([category, models]) => (
                 <div key={category}>
-                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b border-border/20">
                     {category}
                   </div>
                   {models.map(model => (
                     <SelectItem key={model} value={model} className="hover:bg-accent/50 text-xs sm:text-sm">
                       <div className="flex items-center justify-between w-full">
                         <span className="truncate">{modelDisplayNames[model as Model]}</span>
-                        <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">Live</Badge>
+                        <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">
+                          Live
+                        </Badge>
                       </div>
                     </SelectItem>
                   ))}
@@ -482,22 +492,21 @@ export const EnhancedChatContainer = ({
           </Select>
         </div>
         
-        {/* Action buttons - Mobile optimized */}
+        {/* Action buttons */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           <VoiceSettings>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-9">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-9">
               <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </VoiceSettings>
           
-          {/* Desktop buttons */}
-          <div className="hidden sm:flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-1">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={regenerateLastResponse} 
               disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0"
             >
               <RefreshCw className="w-4 h-4" />
             </Button>
@@ -505,7 +514,7 @@ export const EnhancedChatContainer = ({
               variant="ghost" 
               size="sm" 
               onClick={copyChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0"
             >
               <Copy className="w-4 h-4" />
             </Button>
@@ -513,7 +522,7 @@ export const EnhancedChatContainer = ({
               variant="ghost" 
               size="sm" 
               onClick={exportChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0"
             >
               <Download className="w-4 h-4" />
             </Button>
@@ -521,7 +530,7 @@ export const EnhancedChatContainer = ({
               variant="ghost" 
               size="sm" 
               onClick={shareChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0"
             >
               <Share className="w-4 h-4" />
             </Button>
@@ -531,20 +540,22 @@ export const EnhancedChatContainer = ({
             variant="ghost" 
             size="sm" 
             onClick={clearChat}
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+            disabled={isStreaming}
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
           >
             <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline ml-2">Clear</span>
           </Button>
           
-          <div className="text-xs sm:text-sm text-muted-foreground bg-muted/30 px-2 py-1 rounded-full border border-border/30 hidden sm:block">
-            {messages.filter(m => m.id !== 'welcome').length} messages
+          <div className="text-xs sm:text-sm text-muted-foreground bg-muted/30 px-2 py-1 rounded-lg border border-border/30 hidden sm:block">
+            {messages.filter(m => m.id !== 'welcome').length} msgs
           </div>
         </div>
       </div>
       
-      {/* Chat Area - Mobile optimized */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-4 md:p-6">
-        <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Chat Area */}
+      <ScrollArea ref={scrollAreaRef} className="flex-1 px-3 sm:px-4 md:px-6">
+        <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto py-4 sm:py-6">
           {messages.map(message => (
             <ChatMessage 
               key={message.id} 
@@ -554,7 +565,6 @@ export const EnhancedChatContainer = ({
               model={message.model} 
             />
           ))}
-          {isTyping && !isStreaming && <TypingIndicator />}
           {isStreaming && streamingText && (
             <div className="animate-fade-in">
               <ChatMessage 
@@ -566,12 +576,13 @@ export const EnhancedChatContainer = ({
               />
             </div>
           )}
+          {isTyping && !isStreaming && <TypingIndicator />}
         </div>
       </ScrollArea>
 
-      {/* Input Area - Mobile optimized */}
-      <div className="p-3 sm:p-4 md:p-6 bg-background border-t border-border/20">
-        <div className="max-w-3xl mx-auto">
+      {/* Input Area */}
+      <div className="p-3 sm:p-4 md:p-6 bg-background/95 backdrop-blur-sm border-t border-border/20">
+        <div className="max-w-4xl mx-auto">
           <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
         </div>
       </div>

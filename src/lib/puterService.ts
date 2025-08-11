@@ -17,30 +17,36 @@ export class PuterService {
   }
   
   async isAvailable(): Promise<boolean> {
-    return typeof (window as any).puter !== 'undefined' && 
-           typeof (window as any).puter.ai !== 'undefined';
+    try {
+      return typeof (window as any).puter !== 'undefined' && 
+             typeof (window as any).puter.ai !== 'undefined';
+    } catch (error) {
+      console.error('Error checking Puter availability:', error);
+      return false;
+    }
   }
   
   async chat(message: string, options: PuterAIOptions = {}): Promise<string> {
     if (!await this.isAvailable()) {
-      console.log('Puter SDK not available, will use fallback');
-      throw new Error('Puter SDK not available');
+      console.log('Puter SDK not available, throwing error');
+      throw new Error('Puter SDK not available. Please ensure the Puter SDK is loaded in your HTML.');
     }
     
     const defaultOptions: PuterAIOptions = {
-      model: 'gpt-4o-mini',
-      max_tokens: 1000,
+      model: 'deepseek-v3',
+      max_tokens: 1500,
       temperature: 0.7,
       ...options
     };
     
     try {
+      console.log('Calling Puter AI with:', { message, options: defaultOptions });
       const response = await (window as any).puter.ai.chat(message, defaultOptions);
       console.log('Raw Puter response:', response);
       return this.extractResponseText(response);
     } catch (error) {
       console.error('Puter AI Error:', error);
-      throw error;
+      throw new Error(`AI service error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -51,12 +57,12 @@ export class PuterService {
     
     try {
       console.log('Processing image with Puter AI:', imageUrl);
-      const response = await (window as any).puter.ai.img2txt(imageUrl, prompt);
+      const response = await (window as any).puter.ai.img2txt(imageUrl, prompt || 'Describe this image in detail');
       console.log('Puter AI image response:', response);
       return this.extractResponseText(response);
     } catch (error) {
       console.error('Puter imageToText error:', error);
-      throw error;
+      throw new Error(`Image processing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -66,8 +72,8 @@ export class PuterService {
     }
     
     const defaultOptions: PuterAIOptions = {
-      model: 'gpt-4o-mini',
-      max_tokens: 1500,
+      model: 'deepseek-v3',
+      max_tokens: 2000,
       temperature: 0.7,
       ...options
     };
@@ -86,7 +92,7 @@ export class PuterService {
       return this.extractResponseText(response);
     } catch (error) {
       console.error('Puter chatWithFiles error:', error);
-      throw error;
+      throw new Error(`File processing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   
@@ -135,7 +141,7 @@ export class PuterService {
     console.log('Converted to string:', stringResponse);
     
     if (!stringResponse || stringResponse === 'undefined' || stringResponse === 'null') {
-      throw new Error('Invalid response format.');
+      throw new Error('Invalid response format from AI service.');
     }
     
     return stringResponse;
@@ -171,35 +177,42 @@ export class PuterService {
   }
   
   mapModelName(modelId: string): string {
-    // Map to exact Puter model names
+    // Map to exact Puter model names - these are the actual model names supported by Puter
     const modelMap: Record<string, string> = {
-      // OpenAI
+      // OpenAI - using exact Puter model names
       'gpt-4o': 'gpt-4o',
       'gpt-4o-mini': 'gpt-4o-mini',
       'gpt-4-turbo': 'gpt-4-turbo',
       'gpt-3.5-turbo': 'gpt-3.5-turbo',
       
-      // Anthropic
+      // Anthropic - using exact Puter model names
       'claude-3-5-sonnet-20241022': 'claude-3-5-sonnet-20241022',
       'claude-3-5-haiku-20241022': 'claude-3-5-haiku-20241022',
       'claude-3-opus-20240229': 'claude-3-opus-20240229',
       
-      // Google
+      // Google - using exact Puter model names
       'gemini-1.5-flash': 'gemini-1.5-flash',
       'gemini-1.5-pro': 'gemini-1.5-pro',
       'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
       
-      // DeepSeek
+      // DeepSeek - using exact Puter model names
       'deepseek-r1': 'deepseek-r1',
       'deepseek-v3': 'deepseek-v3',
       
-      // Meta
+      // Meta - using exact Puter model names
       'llama-3.1-405b': 'llama-3.1-405b',
       'llama-3.1-70b': 'llama-3.1-70b',
       'llama-3.1-8b': 'llama-3.1-8b'
     };
     
-    return modelMap[modelId] || 'deepseek-v3';
+    const mappedModel = modelMap[modelId];
+    if (!mappedModel) {
+      console.warn(`Model ${modelId} not found in mapping, using deepseek-v3 as fallback`);
+      return 'deepseek-v3';
+    }
+    
+    console.log(`Mapped ${modelId} to ${mappedModel}`);
+    return mappedModel;
   }
 }
 

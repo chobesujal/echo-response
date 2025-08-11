@@ -16,7 +16,9 @@ import {
   ChevronDown,
   Volume2,
   VolumeX,
-  Send
+  Send,
+  Paperclip,
+  X
 } from "lucide-react";
 
 interface EnhancedChatInputProps {
@@ -89,15 +91,25 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     const validFiles = files.filter(file => {
-      // Allow images, text files, PDFs, docs
-      const validTypes = ['image/', 'text/', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument'];
-      return validTypes.some(type => file.type.startsWith(type)) && file.size <= 10 * 1024 * 1024; // 10MB limit
+      // Allow images, text files, PDFs, docs, code files
+      const validTypes = [
+        'image/', 'text/', 'application/pdf', 'application/msword', 
+        'application/vnd.openxmlformats-officedocument',
+        'application/json', 'application/javascript'
+      ];
+      const validExtensions = ['.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.cpp', '.c', '.cs', '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.html', '.css', '.scss', '.sass', '.vue', '.svelte', '.md', '.yml', '.yaml', '.xml', '.sql', '.sh', '.ps1'];
+      
+      const isValidType = validTypes.some(type => file.type.startsWith(type));
+      const isValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+      
+      return (isValidType || isValidExtension) && isValidSize;
     });
 
     if (validFiles.length !== files.length) {
       toast({
         title: "Invalid Files",
-        description: "Some files were skipped. Only images, text files, and documents under 10MB are allowed.",
+        description: "Some files were skipped. Only supported file types under 10MB are allowed.",
         variant: "destructive"
       });
     }
@@ -123,15 +135,9 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
 
     try {
       if (!isListening) {
-        // Request microphone permission
         await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // Start voice conversation
-        const agentId = "your-agent-id"; // Replace with actual agent ID
-        await conversation.startSession({ 
-          agentId,
-          // You would need to implement signed URL generation for production
-        });
+        const agentId = localStorage.getItem('elevenlabs-agent-id') || 'default-agent';
+        await conversation.startSession({ agentId });
         setIsListening(true);
       } else {
         await conversation.endSession();
@@ -169,7 +175,6 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
     }
   };
 
-  // Auto-resize textarea
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value);
     
@@ -179,23 +184,27 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
   };
 
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      return <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />;
+    }
+    return <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />;
+  };
+
   return (
     <div className="relative">
       {/* Attached Files */}
       {attachedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-2 sm:p-3 bg-gradient-secondary rounded-t-2xl border border-border/50 mb-0">
+        <div className="flex flex-wrap gap-2 p-3 bg-muted/20 rounded-t-2xl border border-border/30 mb-0">
           {attachedFiles.map((file, index) => (
-            <div key={index} className="flex items-center gap-2 bg-background/80 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-2 rounded-xl text-xs sm:text-sm border border-border/30 shadow-message">
-              {file.type.startsWith('image/') ? 
-                <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" /> : 
-                <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-              }
-              <span className="truncate max-w-24 sm:max-w-32 text-foreground">{file.name}</span>
+            <div key={index} className="flex items-center gap-2 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-xl text-xs sm:text-sm border border-border/30 shadow-sm">
+              {getFileIcon(file)}
+              <span className="truncate max-w-32 sm:max-w-40 text-foreground font-medium">{file.name}</span>
               <button
                 onClick={() => removeFile(index)}
-                className="text-muted-foreground hover:text-foreground transition-colors ml-1 flex-shrink-0"
+                className="text-muted-foreground hover:text-foreground transition-colors ml-1 flex-shrink-0 hover:bg-muted/50 rounded-full p-1"
               >
-                ×
+                <X className="w-3 h-3" />
               </button>
             </div>
           ))}
@@ -203,25 +212,17 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
       )}
 
       {/* Main Input Container */}
-      <div className={`flex items-end gap-2 sm:gap-3 p-3 sm:p-4 bg-muted/30 border border-border/50 ${attachedFiles.length > 0 ? 'rounded-b-3xl' : 'rounded-3xl'}`}>
-        {/* Add Files Button */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 hover:bg-background/80 border border-border/30 transition-all duration-200 p-0"
-            >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-popover text-popover-foreground border border-border z-50 rounded-xl">
-            <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="hover:bg-accent/50">
-              <Upload className="w-4 h-4 mr-2" />
-              Upload File
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className={`flex items-end gap-2 sm:gap-3 p-3 sm:p-4 bg-background border border-border/30 shadow-sm ${attachedFiles.length > 0 ? 'rounded-b-2xl border-t-0' : 'rounded-2xl'}`}>
+        {/* Attach Files Button */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => fileInputRef.current?.click()}
+          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted/50 hover:bg-muted/80 border border-border/30 transition-all duration-200 p-0"
+          disabled={disabled}
+        >
+          <Paperclip className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+        </Button>
 
         {/* Message Input */}
         <div className="flex-1 relative">
@@ -230,8 +231,8 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
             value={message}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder="How can I help you today?"
-            className="min-h-[44px] max-h-[120px] resize-none pr-20 sm:pr-32 bg-background border-0 rounded-3xl text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none transition-all duration-200 text-sm sm:text-base"
+            placeholder={isListening ? "Listening... Speak now" : "Message Cosmic AI..."}
+            className="min-h-[44px] max-h-[120px] resize-none pr-24 sm:pr-32 bg-transparent border-0 rounded-2xl text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none transition-all duration-200 text-sm sm:text-base"
             disabled={disabled || isListening}
             rows={1}
           />
@@ -244,6 +245,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
                   variant="ghost" 
                   size="sm" 
                   className="h-6 sm:h-8 px-2 sm:px-3 rounded-full bg-muted/50 hover:bg-muted/80 text-xs font-medium transition-all duration-200"
+                  disabled={disabled}
                 >
                   {getModeIcon()}
                   <span className="ml-1 hidden sm:inline">{getModeLabel()}</span>
@@ -253,15 +255,15 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
               <DropdownMenuContent className="bg-popover text-popover-foreground border border-border z-50 rounded-xl">
                 <DropdownMenuItem onClick={() => setMode('normal')} className="hover:bg-accent/50">
                   <Brain className="w-4 h-4 mr-2" />
-                  Normal
+                  Normal Chat
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setMode('thinking')} className="hover:bg-accent/50">
                   <Brain className="w-4 h-4 mr-2" />
-                  Thinking
+                  Thinking Mode
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setMode('search')} className="hover:bg-accent/50">
                   <Search className="w-4 h-4 mr-2" />
-                  Search
+                  Search Mode
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -272,7 +274,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
               size="sm" 
               className={`shrink-0 w-6 h-6 sm:w-8 sm:h-8 p-0 rounded-lg transition-all duration-300 ${
                 isListening 
-                  ? 'bg-blue-600 text-white animate-pulse' 
+                  ? 'bg-blue-600 text-white animate-pulse shadow-lg' 
                   : 'bg-muted/50 hover:bg-muted/80'
               }`}
               onClick={handleVoiceToggle}
@@ -288,7 +290,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
           onClick={handleSend} 
           disabled={(!message.trim() && attachedFiles.length === 0) || disabled}
           size="sm"
-          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground transition-all duration-200 shadow-sm hover:shadow-md"
         >
           <Send className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>
@@ -300,16 +302,16 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
         ref={fileInputRef}
         onChange={handleFileUpload}
         multiple
-        accept="image/*,.pdf,.doc,.docx,.txt,.md"
+        accept="image/*,.pdf,.doc,.docx,.txt,.md,.js,.ts,.jsx,.tsx,.py,.java,.cpp,.c,.cs,.go,.rs,.php,.rb,.swift,.kt,.html,.css,.scss,.sass,.vue,.svelte,.yml,.yaml,.xml,.json,.sql,.sh,.ps1"
         className="hidden"
       />
 
       {/* Voice Status */}
       {isListening && (
-        <div className="absolute -top-12 sm:-top-16 left-1/2 transform -translate-x-1/2 bg-gradient-primary text-primary-foreground px-3 sm:px-4 py-1 sm:py-2 rounded-xl text-xs sm:text-sm font-medium shadow-glow animate-fade-in">
+        <div className="absolute -top-16 sm:-top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-medium shadow-lg animate-fade-in">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-primary-foreground rounded-full animate-pulse"></div>
-            Listening... Speak now or click to stop
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            🎤 Listening... Speak now or click to stop
           </div>
         </div>
       )}
