@@ -32,9 +32,19 @@ type Model =
   | 'gpt-4o-mini' 
   | 'gpt-4-turbo' 
   | 'gpt-3.5-turbo'
+  | 'gpt-5'
+  | 'gpt-5-mini'
+  | 'gpt-5-nano'
+  | 'gpt-5-chat-latest'
+  | 'gpt-4.1'
+  | 'gpt-4.1-mini'
+  | 'gpt-4.1-nano'
+  | 'gpt-4.5-preview'
   | 'claude-3-5-sonnet-20241022'
   | 'claude-3-5-haiku-20241022'
   | 'claude-3-opus-20240229'
+  | 'claude-sonnet-4'
+  | 'claude-opus-4'
   | 'gemini-1.5-flash'
   | 'gemini-1.5-pro'
   | 'gemini-2.0-flash-exp'
@@ -49,9 +59,19 @@ const modelDisplayNames: Record<Model, string> = {
   'gpt-4o-mini': 'GPT-4o Mini',
   'gpt-4-turbo': 'GPT-4 Turbo',
   'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+  'gpt-5': 'GPT-5',
+  'gpt-5-mini': 'GPT-5 Mini',
+  'gpt-5-nano': 'GPT-5 Nano',
+  'gpt-5-chat-latest': 'GPT-5 Chat Latest',
+  'gpt-4.1': 'GPT-4.1',
+  'gpt-4.1-mini': 'GPT-4.1 Mini',
+  'gpt-4.1-nano': 'GPT-4.1 Nano',
+  'gpt-4.5-preview': 'GPT-4.5 Preview',
   'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
   'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
   'claude-3-opus-20240229': 'Claude 3 Opus',
+  'claude-sonnet-4': 'Claude Sonnet 4',
+  'claude-opus-4': 'Claude Opus 4',
   'gemini-1.5-flash': 'Gemini 1.5 Flash',
   'gemini-1.5-pro': 'Gemini 1.5 Pro',
   'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
@@ -63,8 +83,10 @@ const modelDisplayNames: Record<Model, string> = {
 };
 
 const modelCategories = {
-  'OpenAI': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  'Anthropic': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+  'GPT-5 Series': ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5-chat-latest'],
+  'GPT-4 Series': ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4.5-preview', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  'Claude-4 Series': ['claude-sonnet-4', 'claude-opus-4'],
+  'Claude-3 Series': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
   'Google': ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'],
   'DeepSeek': ['deepseek-r1', 'deepseek-v3'],
   'Meta': ['llama-3.1-405b', 'llama-3.1-70b', 'llama-3.1-8b']
@@ -89,6 +111,7 @@ export const EnhancedChatContainer = ({
   const [isTyping, setIsTyping] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [sessionId] = useState(() => Date.now().toString());
   const [streamingText, setStreamingText] = useState("");
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -300,20 +323,20 @@ export const EnhancedChatContainer = ({
       if (processedFiles.length > 0) {
         const content = [{
           type: 'text',
-          text: systemPrompt + text
+          text: systemPrompt + messageText
         }, ...processedFiles];
         responseText = await puterService.chatWithFiles(content, {
           model: puterModel,
           max_tokens: 2000,
           temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
-        });
+        }, sessionId);
       } else {
         responseText = await puterService.chat(systemPrompt + messageText, {
           model: puterModel,
           context: contextMessages,
           max_tokens: 1500,
           temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
-        });
+        }, sessionId);
       }
 
       console.log('Puter response received:', responseText);
