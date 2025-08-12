@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ChatMessage } from "./ChatMessage";
 import { EnhancedChatInput } from "./EnhancedChatInput";
 import { TypingIndicator } from "./TypingIndicator";
@@ -28,23 +28,23 @@ interface ChatSession {
 }
 
 type Model = 
+  | 'gpt-5' 
+  | 'gpt-5-mini' 
+  | 'gpt-5-nano' 
+  | 'gpt-5-chat-latest'
+  | 'gpt-4.1' 
+  | 'gpt-4.1-mini' 
+  | 'gpt-4.1-nano' 
+  | 'gpt-4.5-preview'
   | 'gpt-4o' 
   | 'gpt-4o-mini' 
   | 'gpt-4-turbo' 
   | 'gpt-3.5-turbo'
-  | 'gpt-5'
-  | 'gpt-5-mini'
-  | 'gpt-5-nano'
-  | 'gpt-5-chat-latest'
-  | 'gpt-4.1'
-  | 'gpt-4.1-mini'
-  | 'gpt-4.1-nano'
-  | 'gpt-4.5-preview'
+  | 'claude-sonnet-4'
+  | 'claude-opus-4'
   | 'claude-3-5-sonnet-20241022'
   | 'claude-3-5-haiku-20241022'
   | 'claude-3-opus-20240229'
-  | 'claude-sonnet-4'
-  | 'claude-opus-4'
   | 'gemini-1.5-flash'
   | 'gemini-1.5-pro'
   | 'gemini-2.0-flash-exp'
@@ -55,10 +55,6 @@ type Model =
   | 'llama-3.1-8b';
 
 const modelDisplayNames: Record<Model, string> = {
-  'gpt-4o': 'GPT-4o',
-  'gpt-4o-mini': 'GPT-4o Mini',
-  'gpt-4-turbo': 'GPT-4 Turbo',
-  'gpt-3.5-turbo': 'GPT-3.5 Turbo',
   'gpt-5': 'GPT-5',
   'gpt-5-mini': 'GPT-5 Mini',
   'gpt-5-nano': 'GPT-5 Nano',
@@ -67,11 +63,15 @@ const modelDisplayNames: Record<Model, string> = {
   'gpt-4.1-mini': 'GPT-4.1 Mini',
   'gpt-4.1-nano': 'GPT-4.1 Nano',
   'gpt-4.5-preview': 'GPT-4.5 Preview',
+  'gpt-4o': 'GPT-4o',
+  'gpt-4o-mini': 'GPT-4o Mini',
+  'gpt-4-turbo': 'GPT-4 Turbo',
+  'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+  'claude-sonnet-4': 'Claude Sonnet 4',
+  'claude-opus-4': 'Claude Opus 4',
   'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
   'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
   'claude-3-opus-20240229': 'Claude 3 Opus',
-  'claude-sonnet-4': 'Claude Sonnet 4',
-  'claude-opus-4': 'Claude Opus 4',
   'gemini-1.5-flash': 'Gemini 1.5 Flash',
   'gemini-1.5-pro': 'Gemini 1.5 Pro',
   'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
@@ -84,7 +84,8 @@ const modelDisplayNames: Record<Model, string> = {
 
 const modelCategories = {
   'GPT-5 Series': ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5-chat-latest'],
-  'GPT-4 Series': ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4.5-preview', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  'GPT-4.1 Series': ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4.5-preview'],
+  'GPT-4 Series': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
   'Claude-4 Series': ['claude-sonnet-4', 'claude-opus-4'],
   'Claude-3 Series': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
   'Google': ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'],
@@ -103,19 +104,64 @@ export const EnhancedChatContainer = ({
 }: EnhancedChatContainerProps) => {
   const [messages, setMessages] = useState<Message[]>([{
     id: "welcome",
-    text: "Hello! I'm Cosmic AI, your advanced AI assistant powered by multiple AI models. I can help with coding, writing, analysis, creative tasks, and much more. How can I assist you today?",
+    text: "Hello! I'm Cosmic AI, your advanced AI assistant powered by multiple AI models including GPT-5, GPT-4.1, Claude-4, and more. I can help with coding, writing, analysis, creative tasks, and much more. How can I assist you today?",
     isUser: false,
     timestamp: new Date(),
     model: 'system'
   }]);
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3');
+  const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3'); // Default to DeepSeek V3
   const [isStreaming, setIsStreaming] = useState(false);
   const [sessionId] = useState(() => Date.now().toString());
   const [streamingText, setStreamingText] = useState("");
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [modelStatus, setModelStatus] = useState<Record<string, 'working' | 'testing' | 'error'>>({});
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Initialize Puter service and test models on component mount
+  useEffect(() => {
+    const initializePuter = async () => {
+      try {
+        console.log('🚀 Initializing Puter service...');
+        const initialized = await puterService.initialize();
+        if (initialized) {
+          console.log('✅ Puter service initialized successfully');
+          toast({
+            title: "AI Service Ready",
+            description: "All AI models are now available for use."
+          });
+          
+          // Test DeepSeek V3 specifically
+          try {
+            const testResponse = await puterService.chat('Hi', { model: 'deepseek-v3', max_tokens: 10 });
+            if (testResponse && testResponse.length > 0) {
+              console.log('✅ DeepSeek V3 is working properly');
+              setModelStatus(prev => ({ ...prev, 'deepseek-v3': 'working' }));
+            }
+          } catch (error) {
+            console.error('❌ DeepSeek V3 test failed:', error);
+            setModelStatus(prev => ({ ...prev, 'deepseek-v3': 'error' }));
+          }
+        } else {
+          console.error('❌ Failed to initialize Puter service');
+          toast({
+            title: "Connection Issue",
+            description: "AI service initialization failed. Some features may not work.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('❌ Failed to initialize Puter service:', error);
+        toast({
+          title: "Initialization Error",
+          description: "Failed to connect to AI services. Please refresh the page.",
+          variant: "destructive"
+        });
+      }
+    };
+    initializePuter();
+  }, [toast]);
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
@@ -228,7 +274,7 @@ export const EnhancedChatContainer = ({
           if (file.type.startsWith('image/')) {
             const imageUrl = URL.createObjectURL(file);
             try {
-              const imageDescription = await puterService.imageToText(imageUrl, `Describe this image in detail: ${file.name}`);
+              const imageDescription = await puterService.imageToText(imageUrl, `Describe this image in detail: ${file.name}`, sessionId);
               processedFiles.push({
                 type: 'text',
                 text: `[Image: ${file.name}] ${imageDescription}`
@@ -293,23 +339,20 @@ export const EnhancedChatContainer = ({
     setStreamingMessageId(streamingId);
 
     try {
-      console.log('Sending message to Puter AI:', messageText);
-      console.log('Selected model:', selectedModel);
-
+      console.log('🚀 Sending message to Puter AI:', messageText.slice(0, 100));
+      console.log('📡 Selected model:', selectedModel);
+      
       // Check Puter availability
-      if (typeof (window as any).puter === 'undefined' || typeof (window as any).puter.ai === 'undefined') {
+      if (!await puterService.isAvailable()) {
         throw new Error('Puter SDK not available. Please ensure the Puter SDK is loaded.');
       }
 
-      // Prepare context
+      // Prepare context with memory
       const recentMessages = updatedMessages.slice(-5).filter(msg => msg.id !== 'welcome');
       const contextMessages = recentMessages.map(msg => ({
         role: msg.isUser ? 'user' : 'assistant',
         content: msg.text
       }));
-
-      const puterModel = puterService.mapModelName(selectedModel);
-      console.log('Using Puter model:', puterModel);
 
       let systemPrompt = '';
       if (mode === 'thinking') {
@@ -326,20 +369,25 @@ export const EnhancedChatContainer = ({
           text: systemPrompt + messageText
         }, ...processedFiles];
         responseText = await puterService.chatWithFiles(content, {
-          model: puterModel,
+          model: selectedModel,
           max_tokens: 2000,
-          temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
+          temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7,
+          memory: true
         }, sessionId);
       } else {
         responseText = await puterService.chat(systemPrompt + messageText, {
-          model: puterModel,
+          model: selectedModel,
           context: contextMessages,
           max_tokens: 1500,
-          temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7
+          temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7,
+          memory: true
         }, sessionId);
       }
 
-      console.log('Puter response received:', responseText);
+      console.log('✅ Puter response received:', responseText.slice(0, 100));
+
+      // Update model status
+      setModelStatus(prev => ({ ...prev, [selectedModel]: 'working' }));
 
       // Stream the response
       await streamResponseText(responseText);
@@ -357,24 +405,34 @@ export const EnhancedChatContainer = ({
       saveChat(finalMessages);
       
     } catch (error) {
-      console.error('Puter AI Error:', error);
+      console.error('❌ Puter AI Error:', error);
+      
+      // Update model status
+      setModelStatus(prev => ({ ...prev, [selectedModel]: 'error' }));
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      const errorResponse: Message = {
+      let errorResponse: Message = {
         id: streamingId,
-        text: `I apologize, but I'm unable to process your request at the moment. \n\nError: ${errorMessage}\n\nPlease try again or check if the Puter SDK is properly loaded.`,
+        text: `I apologize, but I'm unable to process your request at the moment. \n\n**Error:** ${errorMessage}\n\nPlease try:\n1. Refreshing the page\n2. Switching to a different model\n3. Trying again in a moment`,
         isUser: false,
         timestamp: new Date(),
         model: 'error'
       };
+
+      // Provide better error messages for specific issues
+      if (errorMessage.includes('model')) {
+        errorResponse.text = `The selected model "${modelDisplayNames[selectedModel]}" is currently unavailable. Please try:\n\n1. **DeepSeek V3** (recommended)\n2. **GPT-4o Mini**\n3. **Claude 3.5 Sonnet**\n\n**Error details:** ${errorMessage}`;
+      } else if (errorMessage.includes('SDK')) {
+        errorResponse.text = `**Connection issue detected.** Please:\n\n1. Refresh the page\n2. Check your internet connection\n3. Try again in a moment\n\nThe Puter SDK may need to reload.`;
+      }
 
       const finalMessages = [...updatedMessages, errorResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
 
       toast({
-        title: "Connection Error",
-        description: "Unable to connect to AI service. Please try again.",
+        title: "AI Response Error",
+        description: `Failed to get response from ${modelDisplayNames[selectedModel]}. Try a different model.`,
         variant: "destructive"
       });
     } finally {
@@ -384,21 +442,22 @@ export const EnhancedChatContainer = ({
     }
   };
 
+  // Enhanced streaming with better performance
   const streamResponseText = async (text: string) => {
     const words = text.split(' ');
-    const chunkSize = Math.max(1, Math.floor(words.length / 30));
+    const chunkSize = Math.max(1, Math.floor(words.length / 40));
     
     for (let i = 0; i < words.length; i += chunkSize) {
       const chunk = words.slice(i, i + chunkSize).join(' ') + ' ';
       setStreamingText(prev => prev + chunk);
-      await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 30));
+      await new Promise(resolve => setTimeout(resolve, 25 + Math.random() * 15));
     }
   };
 
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
-      text: "Hello! I'm Cosmic AI, your advanced AI assistant. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
+      text: "Hello! I'm Cosmic AI, your advanced AI assistant with access to the latest AI models including GPT-5, GPT-4.1, Claude-4, and more. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -407,8 +466,12 @@ export const EnhancedChatContainer = ({
     setStreamingText("");
     setIsStreaming(false);
     setStreamingMessageId(null);
+    
+    // Clear memory for current session
+    puterService.clearMemory(sessionId, selectedModel);
   };
 
+  // Enhanced regeneration with better error handling
   const regenerateLastResponse = async () => {
     const lastUserMessage = [...messages].reverse().find(m => m.isUser);
     if (lastUserMessage && !isStreaming) {
@@ -422,6 +485,11 @@ export const EnhancedChatContainer = ({
       const messagesUpToLastUser = messages.slice(0, lastUserIndex + 1);
       setMessages(messagesUpToLastUser);
       await handleSendMessage(lastUserMessage.text, [], 'normal');
+    } else if (isStreaming) {
+      toast({
+        title: "Please wait",
+        description: "Please wait for the current response to complete before regenerating."
+      });
     }
   };
 
@@ -474,6 +542,18 @@ export const EnhancedChatContainer = ({
     }
   };
 
+  const getModelStatusBadge = (model: string) => {
+    const status = modelStatus[model];
+    if (status === 'working') {
+      return <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">Live</Badge>;
+    } else if (status === 'error') {
+      return <Badge variant="secondary" className="ml-2 text-xs bg-red-100 text-red-700 border-red-200">Error</Badge>;
+    } else if (status === 'testing') {
+      return <Badge variant="secondary" className="ml-2 text-xs bg-yellow-100 text-yellow-700 border-yellow-200">Testing</Badge>;
+    }
+    return <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700 border-blue-200">Ready</Badge>;
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
@@ -496,16 +576,14 @@ export const EnhancedChatContainer = ({
             <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[400px] overflow-y-auto rounded-xl">
               {Object.entries(modelCategories).map(([category, models]) => (
                 <div key={category}>
-                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b border-border/20">
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-b border-border/20 bg-muted/20">
                     {category}
                   </div>
                   {models.map(model => (
                     <SelectItem key={model} value={model} className="hover:bg-accent/50 text-xs sm:text-sm">
                       <div className="flex items-center justify-between w-full">
                         <span className="truncate">{modelDisplayNames[model as Model]}</span>
-                        <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">
-                          Live
-                        </Badge>
+                        {getModelStatusBadge(model)}
                       </div>
                     </SelectItem>
                   ))}
