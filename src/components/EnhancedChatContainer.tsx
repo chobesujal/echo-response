@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, RefreshCw, Copy, Download, Share, Sparkles, Settings, Plus } from "lucide-react";
+import { Trash2, RefreshCw, Copy, Download, Share, Sparkles, Settings, Plus, Brain, Search, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { puterService } from "@/lib/puterService";
 import { VoiceSettings } from "./VoiceSettings";
@@ -28,69 +28,53 @@ interface ChatSession {
 }
 
 type Model = 
-  | 'gpt-5' 
-  | 'gpt-5-mini' 
-  | 'gpt-5-nano' 
-  | 'gpt-5-chat-latest'
-  | 'gpt-4.1' 
-  | 'gpt-4.1-mini' 
-  | 'gpt-4.1-nano' 
-  | 'gpt-4.5-preview'
+  | 'deepseek-v3'
+  | 'deepseek-r1'
   | 'gpt-4o' 
   | 'gpt-4o-mini' 
   | 'gpt-4-turbo' 
   | 'gpt-3.5-turbo'
-  | 'claude-sonnet-4'
-  | 'claude-opus-4'
   | 'claude-3-5-sonnet-20241022'
   | 'claude-3-5-haiku-20241022'
   | 'claude-3-opus-20240229'
   | 'gemini-1.5-flash'
   | 'gemini-1.5-pro'
   | 'gemini-2.0-flash-exp'
-  | 'deepseek-r1'
-  | 'deepseek-v3'
   | 'llama-3.1-405b'
   | 'llama-3.1-70b'
-  | 'llama-3.1-8b';
+  | 'llama-3.1-8b'
+  | 'mistral-large'
+  | 'mixtral-8x7b'
+  | 'codellama-34b';
 
 const modelDisplayNames: Record<Model, string> = {
-  'gpt-5': 'GPT-5',
-  'gpt-5-mini': 'GPT-5 Mini',
-  'gpt-5-nano': 'GPT-5 Nano',
-  'gpt-5-chat-latest': 'GPT-5 Chat Latest',
-  'gpt-4.1': 'GPT-4.1',
-  'gpt-4.1-mini': 'GPT-4.1 Mini',
-  'gpt-4.1-nano': 'GPT-4.1 Nano',
-  'gpt-4.5-preview': 'GPT-4.5 Preview',
+  'deepseek-v3': 'DeepSeek V3',
+  'deepseek-r1': 'DeepSeek R1',
   'gpt-4o': 'GPT-4o',
   'gpt-4o-mini': 'GPT-4o Mini',
   'gpt-4-turbo': 'GPT-4 Turbo',
   'gpt-3.5-turbo': 'GPT-3.5 Turbo',
-  'claude-sonnet-4': 'Claude Sonnet 4',
-  'claude-opus-4': 'Claude Opus 4',
   'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
   'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
   'claude-3-opus-20240229': 'Claude 3 Opus',
   'gemini-1.5-flash': 'Gemini 1.5 Flash',
   'gemini-1.5-pro': 'Gemini 1.5 Pro',
   'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
-  'deepseek-r1': 'DeepSeek R1',
-  'deepseek-v3': 'DeepSeek V3',
   'llama-3.1-405b': 'Llama 3.1 405B',
   'llama-3.1-70b': 'Llama 3.1 70B',
-  'llama-3.1-8b': 'Llama 3.1 8B'
+  'llama-3.1-8b': 'Llama 3.1 8B',
+  'mistral-large': 'Mistral Large',
+  'mixtral-8x7b': 'Mixtral 8x7B',
+  'codellama-34b': 'CodeLlama 34B'
 };
 
 const modelCategories = {
-  'GPT-5 Series': ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5-chat-latest'],
-  'GPT-4.1 Series': ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4.5-preview'],
-  'GPT-4 Series': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  'Claude-4 Series': ['claude-sonnet-4', 'claude-opus-4'],
-  'Claude-3 Series': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+  'DeepSeek (Recommended)': ['deepseek-v3', 'deepseek-r1'],
+  'OpenAI': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  'Anthropic': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
   'Google': ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'],
-  'DeepSeek': ['deepseek-r1', 'deepseek-v3'],
-  'Meta': ['llama-3.1-405b', 'llama-3.1-70b', 'llama-3.1-8b']
+  'Meta': ['llama-3.1-405b', 'llama-3.1-70b', 'llama-3.1-8b'],
+  'Other': ['mistral-large', 'mixtral-8x7b', 'codellama-34b']
 };
 
 interface EnhancedChatContainerProps {
@@ -104,7 +88,7 @@ export const EnhancedChatContainer = ({
 }: EnhancedChatContainerProps) => {
   const [messages, setMessages] = useState<Message[]>([{
     id: "welcome",
-    text: "Hello! I'm Cosmic AI, your advanced AI assistant powered by multiple AI models including GPT-5, GPT-4.1, Claude-4, and more. I can help with coding, writing, analysis, creative tasks, and much more. How can I assist you today?",
+    text: "Hello! I'm **Cosmic AI**, your advanced AI assistant with access to multiple cutting-edge AI models including DeepSeek, GPT-4, Claude, Gemini, and more.\n\n🚀 **What I can help you with:**\n• **Coding & Development** - Write, debug, and explain code in 50+ languages\n• **Creative Writing** - Stories, articles, scripts, and more\n• **Analysis & Research** - Data analysis, research, and insights\n• **Problem Solving** - Step-by-step solutions and explanations\n• **Image Analysis** - Describe and analyze uploaded images\n• **File Processing** - Work with documents, code files, and more\n\n💡 **Choose your preferred AI model** from the dropdown above and let's start our conversation!",
     isUser: false,
     timestamp: new Date(),
     model: 'system'
@@ -112,7 +96,7 @@ export const EnhancedChatContainer = ({
   const [isTyping, setIsTyping] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3'); // Default to DeepSeek V3
   const [isStreaming, setIsStreaming] = useState(false);
-  const [sessionId] = useState(() => Date.now().toString());
+  const [sessionId] = useState(() => `session-${Date.now()}`);
   const [streamingText, setStreamingText] = useState("");
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [modelStatus, setModelStatus] = useState<Record<string, 'working' | 'testing' | 'error'>>({});
@@ -128,13 +112,13 @@ export const EnhancedChatContainer = ({
         if (initialized) {
           console.log('✅ Puter service initialized successfully');
           toast({
-            title: "AI Service Ready",
+            title: "🚀 AI Service Ready",
             description: "All AI models are now available for use."
           });
           
           // Test DeepSeek V3 specifically
           try {
-            const testResponse = await puterService.chat('Hi', { model: 'deepseek-v3', max_tokens: 10 });
+            const testResponse = await puterService.chat('Hi', { model: 'deepseek-v3', max_tokens: 10 }, sessionId);
             if (testResponse && testResponse.length > 0) {
               console.log('✅ DeepSeek V3 is working properly');
               setModelStatus(prev => ({ ...prev, 'deepseek-v3': 'working' }));
@@ -146,7 +130,7 @@ export const EnhancedChatContainer = ({
         } else {
           console.error('❌ Failed to initialize Puter service');
           toast({
-            title: "Connection Issue",
+            title: "⚠️ Connection Issue",
             description: "AI service initialization failed. Some features may not work.",
             variant: "destructive"
           });
@@ -154,14 +138,14 @@ export const EnhancedChatContainer = ({
       } catch (error) {
         console.error('❌ Failed to initialize Puter service:', error);
         toast({
-          title: "Initialization Error",
+          title: "❌ Initialization Error",
           description: "Failed to connect to AI services. Please refresh the page.",
           variant: "destructive"
         });
       }
     };
     initializePuter();
-  }, [toast]);
+  }, [toast, sessionId]);
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
@@ -211,7 +195,7 @@ export const EnhancedChatContainer = ({
   const saveChat = (updatedMessages: Message[]) => {
     try {
       const chatSession: ChatSession = {
-        id: currentChatId || Date.now().toString(),
+        id: currentChatId || sessionId,
         title: generateChatTitle(updatedMessages),
         messages: updatedMessages,
         timestamp: new Date(),
@@ -282,7 +266,7 @@ export const EnhancedChatContainer = ({
             } catch (error) {
               processedFiles.push({
                 type: 'text',
-                text: `[Image: ${file.name}] - Unable to process image`
+                text: `[Image: ${file.name}] - Unable to process image: ${error}`
               });
             }
             URL.revokeObjectURL(imageUrl);
@@ -341,18 +325,12 @@ export const EnhancedChatContainer = ({
     try {
       console.log('🚀 Sending message to Puter AI:', messageText.slice(0, 100));
       console.log('📡 Selected model:', selectedModel);
+      console.log('🔗 Session ID:', sessionId);
       
       // Check Puter availability
       if (!await puterService.isAvailable()) {
         throw new Error('Puter SDK not available. Please ensure the Puter SDK is loaded.');
       }
-
-      // Prepare context with memory
-      const recentMessages = updatedMessages.slice(-5).filter(msg => msg.id !== 'welcome');
-      const contextMessages = recentMessages.map(msg => ({
-        role: msg.isUser ? 'user' : 'assistant',
-        content: msg.text
-      }));
 
       let systemPrompt = '';
       if (mode === 'thinking') {
@@ -377,7 +355,6 @@ export const EnhancedChatContainer = ({
       } else {
         responseText = await puterService.chat(systemPrompt + messageText, {
           model: selectedModel,
-          context: contextMessages,
           max_tokens: 1500,
           temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7,
           memory: true
@@ -413,7 +390,7 @@ export const EnhancedChatContainer = ({
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       let errorResponse: Message = {
         id: streamingId,
-        text: `I apologize, but I'm unable to process your request at the moment. \n\n**Error:** ${errorMessage}\n\nPlease try:\n1. Refreshing the page\n2. Switching to a different model\n3. Trying again in a moment`,
+        text: `I apologize, but I'm unable to process your request at the moment. \n\n**Error:** ${errorMessage}\n\n**Possible solutions:**\n1. Try refreshing the page\n2. Switch to a different model (DeepSeek V3 recommended)\n3. Check your internet connection\n4. Try again in a moment\n\nPlease try again or contact support if the issue persists.`,
         isUser: false,
         timestamp: new Date(),
         model: 'error'
@@ -421,9 +398,9 @@ export const EnhancedChatContainer = ({
 
       // Provide better error messages for specific issues
       if (errorMessage.includes('model')) {
-        errorResponse.text = `The selected model "${modelDisplayNames[selectedModel]}" is currently unavailable. Please try:\n\n1. **DeepSeek V3** (recommended)\n2. **GPT-4o Mini**\n3. **Claude 3.5 Sonnet**\n\n**Error details:** ${errorMessage}`;
+        errorResponse.text = `The selected model "${modelDisplayNames[selectedModel]}" is currently unavailable. Please try:\n\n**Recommended alternatives:**\n1. **DeepSeek V3** (most reliable)\n2. **GPT-4o Mini** (fast and efficient)\n3. **Claude 3.5 Sonnet** (excellent reasoning)\n\n**Error details:** ${errorMessage}`;
       } else if (errorMessage.includes('SDK')) {
-        errorResponse.text = `**Connection issue detected.** Please:\n\n1. Refresh the page\n2. Check your internet connection\n3. Try again in a moment\n\nThe Puter SDK may need to reload.`;
+        errorResponse.text = `**Connection issue detected.** Please:\n\n1. **Refresh the page** to reload the AI service\n2. **Check your internet connection**\n3. **Try again in a moment**\n\nThe Puter SDK may need to reload to restore full functionality.`;
       }
 
       const finalMessages = [...updatedMessages, errorResponse];
@@ -431,7 +408,7 @@ export const EnhancedChatContainer = ({
       saveChat(finalMessages);
 
       toast({
-        title: "AI Response Error",
+        title: "❌ AI Response Error",
         description: `Failed to get response from ${modelDisplayNames[selectedModel]}. Try a different model.`,
         variant: "destructive"
       });
@@ -445,19 +422,19 @@ export const EnhancedChatContainer = ({
   // Enhanced streaming with better performance
   const streamResponseText = async (text: string) => {
     const words = text.split(' ');
-    const chunkSize = Math.max(1, Math.floor(words.length / 40));
+    const chunkSize = Math.max(1, Math.floor(words.length / 50));
     
     for (let i = 0; i < words.length; i += chunkSize) {
       const chunk = words.slice(i, i + chunkSize).join(' ') + ' ';
       setStreamingText(prev => prev + chunk);
-      await new Promise(resolve => setTimeout(resolve, 25 + Math.random() * 15));
+      await new Promise(resolve => setTimeout(resolve, 20 + Math.random() * 10));
     }
   };
 
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
-      text: "Hello! I'm Cosmic AI, your advanced AI assistant with access to the latest AI models including GPT-5, GPT-4.1, Claude-4, and more. I can help with coding, writing, analysis, and much more. Choose your preferred model and let's start our conversation! ✨",
+      text: "Hello! I'm **Cosmic AI**, your advanced AI assistant with access to multiple cutting-edge AI models including DeepSeek, GPT-4, Claude, Gemini, and more.\n\n🚀 **What I can help you with:**\n• **Coding & Development** - Write, debug, and explain code in 50+ languages\n• **Creative Writing** - Stories, articles, scripts, and more\n• **Analysis & Research** - Data analysis, research, and insights\n• **Problem Solving** - Step-by-step solutions and explanations\n• **Image Analysis** - Describe and analyze uploaded images\n• **File Processing** - Work with documents, code files, and more\n\n💡 **Choose your preferred AI model** from the dropdown above and let's start our conversation!",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -467,7 +444,7 @@ export const EnhancedChatContainer = ({
     setIsStreaming(false);
     setStreamingMessageId(null);
     
-    // Clear memory for current session
+    // Clear memory for current session and model
     puterService.clearMemory(sessionId, selectedModel);
   };
 
@@ -487,7 +464,7 @@ export const EnhancedChatContainer = ({
       await handleSendMessage(lastUserMessage.text, [], 'normal');
     } else if (isStreaming) {
       toast({
-        title: "Please wait",
+        title: "⏳ Please wait",
         description: "Please wait for the current response to complete before regenerating."
       });
     }
@@ -499,7 +476,7 @@ export const EnhancedChatContainer = ({
     ).join('\n\n');
     navigator.clipboard.writeText(chatText);
     toast({
-      title: "Chat copied",
+      title: "📋 Chat copied",
       description: "Chat history has been copied to clipboard."
     });
   };
@@ -519,7 +496,7 @@ export const EnhancedChatContainer = ({
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
     toast({
-      title: "Chat exported",
+      title: "💾 Chat exported",
       description: "Chat has been downloaded as JSON file."
     });
   };
@@ -545,44 +522,63 @@ export const EnhancedChatContainer = ({
   const getModelStatusBadge = (model: string) => {
     const status = modelStatus[model];
     if (status === 'working') {
-      return <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">Live</Badge>;
+      return <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">✅ Live</Badge>;
     } else if (status === 'error') {
-      return <Badge variant="secondary" className="ml-2 text-xs bg-red-100 text-red-700 border-red-200">Error</Badge>;
+      return <Badge variant="secondary" className="ml-2 text-xs bg-red-100 text-red-700 border-red-200">❌ Error</Badge>;
     } else if (status === 'testing') {
-      return <Badge variant="secondary" className="ml-2 text-xs bg-yellow-100 text-yellow-700 border-yellow-200">Testing</Badge>;
+      return <Badge variant="secondary" className="ml-2 text-xs bg-yellow-100 text-yellow-700 border-yellow-200">🧪 Testing</Badge>;
     }
-    return <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700 border-blue-200">Ready</Badge>;
+    return <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700 border-blue-200">⚡ Ready</Badge>;
+  };
+
+  const getModelIcon = (model: string) => {
+    if (model.includes('deepseek')) return '🧠';
+    if (model.includes('gpt')) return '🤖';
+    if (model.includes('claude')) return '🎭';
+    if (model.includes('gemini')) return '💎';
+    if (model.includes('llama')) return '🦙';
+    if (model.includes('mistral')) return '🌪️';
+    if (model.includes('code')) return '💻';
+    return '🚀';
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between p-3 sm:p-4 bg-background/95 backdrop-blur-sm border-b border-border/20 sticky top-0 z-10">
+    <div className="flex flex-col h-full bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Enhanced Header with OpenWebUI-like design */}
+      <div className="flex items-center justify-between p-3 sm:p-4 bg-background/95 backdrop-blur-sm border-b border-border/30 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div className="min-w-0 hidden sm:block">
-              <h1 className="font-semibold text-foreground text-sm">Cosmic AI</h1>
-              <p className="text-xs text-muted-foreground">Advanced AI Assistant</p>
+              <h1 className="font-bold text-foreground text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Cosmic AI
+              </h1>
+              <p className="text-xs text-muted-foreground">Advanced Multi-Model AI Assistant</p>
             </div>
           </div>
           
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
-            <SelectTrigger className="w-32 sm:w-48 bg-muted/50 border border-border/50 text-foreground text-xs sm:text-sm rounded-lg">
-              <SelectValue />
+            <SelectTrigger className="w-40 sm:w-56 bg-muted/50 border border-border/50 text-foreground text-xs sm:text-sm rounded-xl hover:bg-muted/70 transition-colors">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{getModelIcon(selectedModel)}</span>
+                <SelectValue />
+              </div>
             </SelectTrigger>
-            <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[400px] overflow-y-auto rounded-xl">
+            <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[400px] overflow-y-auto rounded-xl shadow-xl">
               {Object.entries(modelCategories).map(([category, models]) => (
                 <div key={category}>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-b border-border/20 bg-muted/20">
+                  <div className="px-3 py-2 text-xs font-bold text-muted-foreground border-b border-border/20 bg-muted/30 sticky top-0">
                     {category}
                   </div>
                   {models.map(model => (
-                    <SelectItem key={model} value={model} className="hover:bg-accent/50 text-xs sm:text-sm">
+                    <SelectItem key={model} value={model} className="hover:bg-accent/50 text-xs sm:text-sm py-3">
                       <div className="flex items-center justify-between w-full">
-                        <span className="truncate">{modelDisplayNames[model as Model]}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{getModelIcon(model)}</span>
+                          <span className="truncate font-medium">{modelDisplayNames[model as Model]}</span>
+                        </div>
                         {getModelStatusBadge(model)}
                       </div>
                     </SelectItem>
@@ -593,10 +589,10 @@ export const EnhancedChatContainer = ({
           </Select>
         </div>
         
-        {/* Action buttons */}
+        {/* Enhanced Action buttons */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           <VoiceSettings>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-9">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-9">
               <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </VoiceSettings>
@@ -607,7 +603,8 @@ export const EnhancedChatContainer = ({
               size="sm" 
               onClick={regenerateLastResponse} 
               disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0"
+              title="Regenerate last response"
             >
               <RefreshCw className="w-4 h-4" />
             </Button>
@@ -615,7 +612,8 @@ export const EnhancedChatContainer = ({
               variant="ghost" 
               size="sm" 
               onClick={copyChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0"
+              title="Copy chat"
             >
               <Copy className="w-4 h-4" />
             </Button>
@@ -623,7 +621,8 @@ export const EnhancedChatContainer = ({
               variant="ghost" 
               size="sm" 
               onClick={exportChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0"
+              title="Export chat"
             >
               <Download className="w-4 h-4" />
             </Button>
@@ -631,7 +630,8 @@ export const EnhancedChatContainer = ({
               variant="ghost" 
               size="sm" 
               onClick={shareChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0"
+              title="Share chat"
             >
               <Share className="w-4 h-4" />
             </Button>
@@ -642,19 +642,20 @@ export const EnhancedChatContainer = ({
             size="sm" 
             onClick={clearChat}
             disabled={isStreaming}
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+            title="Clear chat"
           >
             <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline ml-2">Clear</span>
           </Button>
           
-          <div className="text-xs sm:text-sm text-muted-foreground bg-muted/30 px-2 py-1 rounded-lg border border-border/30 hidden sm:block">
+          <div className="text-xs sm:text-sm text-muted-foreground bg-muted/30 px-3 py-1.5 rounded-xl border border-border/30 hidden sm:block">
             {messages.filter(m => m.id !== 'welcome').length} msgs
           </div>
         </div>
       </div>
       
-      {/* Chat Area */}
+      {/* Chat Area with enhanced styling */}
       <ScrollArea ref={scrollAreaRef} className="flex-1 px-3 sm:px-4 md:px-6">
         <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto py-4 sm:py-6">
           {messages.map(message => (
@@ -681,8 +682,8 @@ export const EnhancedChatContainer = ({
         </div>
       </ScrollArea>
 
-      {/* Input Area */}
-      <div className="p-3 sm:p-4 md:p-6 bg-background/95 backdrop-blur-sm border-t border-border/20">
+      {/* Enhanced Input Area */}
+      <div className="p-3 sm:p-4 md:p-6 bg-background/95 backdrop-blur-sm border-t border-border/30">
         <div className="max-w-4xl mx-auto">
           <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
         </div>

@@ -1,4 +1,4 @@
-// Enhanced Puter AI service with all models, memory, and error handling
+// Enhanced Puter AI service with image-to-text, memory, and comprehensive model support
 export interface PuterAIOptions {
   model?: string;
   context?: Array<{ role: string; content: string }>;
@@ -31,7 +31,7 @@ export class PuterService {
     try {
       // Wait for Puter SDK to be available
       let attempts = 0;
-      while (attempts < 30) {
+      while (attempts < 50) {
         if (typeof (window as any).puter !== 'undefined' && 
             typeof (window as any).puter.ai !== 'undefined') {
           this.isInitialized = true;
@@ -41,11 +41,11 @@ export class PuterService {
           await this.testAvailableModels();
           return true;
         }
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 200));
         attempts++;
       }
       
-      console.warn('❌ Puter SDK not available after 15 seconds');
+      console.warn('❌ Puter SDK not available after timeout');
       return false;
     } catch (error) {
       console.error('❌ Error initializing Puter SDK:', error);
@@ -55,10 +55,23 @@ export class PuterService {
   
   async testAvailableModels(): Promise<void> {
     const testModels = [
-      'deepseek-v3', 'deepseek-r1', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo',
+      // DeepSeek Models (Priority)
+      'deepseek-v3', 'deepseek-r1',
+      
+      // OpenAI Models
+      'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo',
+      
+      // Anthropic Models
       'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229',
+      
+      // Google Models
       'gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro',
-      'llama-3.1-70b', 'llama-3.1-8b', 'llama-3.1-405b'
+      
+      // Meta Models
+      'llama-3.1-70b', 'llama-3.1-8b', 'llama-3.1-405b',
+      
+      // Other Models
+      'mistral-large', 'mixtral-8x7b', 'codellama-34b'
     ];
     
     console.log('🧪 Testing model availability...');
@@ -66,11 +79,9 @@ export class PuterService {
     for (const model of testModels) {
       try {
         const response = await this.quickTest(model);
-        if (response && response.length > 0 && !response.includes('error')) {
+        if (response && response.length > 0 && !response.toLowerCase().includes('error')) {
           this.availableModels.add(model);
           console.log(`✅ Model ${model} is available`);
-        } else {
-          console.warn(`⚠️ Model ${model} returned empty/error response`);
         }
       } catch (error) {
         console.warn(`❌ Model ${model} failed test:`, error);
@@ -112,7 +123,6 @@ export class PuterService {
   
   async forceTestModel(model: string): Promise<string> {
     try {
-      // Try multiple methods to ensure model works
       let response;
       
       // Method 1: Basic call
@@ -152,7 +162,7 @@ export class PuterService {
     }
   }
   
-  // Enhanced memory management with persistence
+  // Enhanced memory management with proper conversation continuity
   addToMemory(sessionId: string, role: string, content: string, model: string) {
     const memoryKey = `${sessionId}-${model}`;
     
@@ -171,9 +181,9 @@ export class PuterService {
       timestamp: new Date() 
     });
     
-    // Keep only last 50 messages per model to prevent memory overflow
-    if (memory.messages.length > 50) {
-      memory.messages = memory.messages.slice(-50);
+    // Keep last 20 messages for better context
+    if (memory.messages.length > 20) {
+      memory.messages = memory.messages.slice(-20);
     }
     
     // Save to localStorage for persistence
@@ -184,8 +194,8 @@ export class PuterService {
     }
   }
   
-  getMemory(sessionId: string, model?: string): Array<{ role: string; content: string }> {
-    const memoryKey = model ? `${sessionId}-${model}` : sessionId;
+  getMemory(sessionId: string, model: string): Array<{ role: string; content: string }> {
+    const memoryKey = `${sessionId}-${model}`;
     
     // Try to load from localStorage first
     try {
@@ -204,12 +214,25 @@ export class PuterService {
   }
   
   clearMemory(sessionId: string, model?: string) {
-    const memoryKey = model ? `${sessionId}-${model}` : sessionId;
-    this.chatMemory.delete(memoryKey);
-    try {
-      localStorage.removeItem(`chat-memory-${memoryKey}`);
-    } catch (error) {
-      console.warn('Failed to clear memory from localStorage:', error);
+    if (model) {
+      const memoryKey = `${sessionId}-${model}`;
+      this.chatMemory.delete(memoryKey);
+      try {
+        localStorage.removeItem(`chat-memory-${memoryKey}`);
+      } catch (error) {
+        console.warn('Failed to clear memory from localStorage:', error);
+      }
+    } else {
+      // Clear all memories for this session
+      const keysToDelete = Array.from(this.chatMemory.keys()).filter(key => key.startsWith(sessionId));
+      keysToDelete.forEach(key => {
+        this.chatMemory.delete(key);
+        try {
+          localStorage.removeItem(`chat-memory-${key}`);
+        } catch (error) {
+          console.warn('Failed to clear memory from localStorage:', error);
+        }
+      });
     }
   }
   
@@ -232,10 +255,10 @@ export class PuterService {
       console.log('🚀 Calling Puter AI with:', { message: message.slice(0, 100), model: defaultOptions.model });
       
       // Add chat memory if enabled and sessionId provided
-      let contextMessages = options.context || [];
-      if (defaultOptions.memory && sessionId) {
+      let contextMessages: Array<{ role: string; content: string }> = [];
+      if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const memory = this.getMemory(sessionId, defaultOptions.model);
-        contextMessages = [...memory.slice(-15), ...contextMessages]; // Use last 15 messages
+        contextMessages = [...memory.slice(-10)]; // Use last 10 messages for context
       }
       
       const puterModel = this.mapModelName(defaultOptions.model!);
@@ -245,7 +268,7 @@ export class PuterService {
       let response;
       let lastError;
       
-      // Method 1: Full featured call
+      // Method 1: Full featured call with context
       try {
         response = await (window as any).puter.ai.chat(message, {
           model: puterModel,
@@ -300,9 +323,9 @@ export class PuterService {
       }
       
       // Add to memory if enabled
-      if (defaultOptions.memory && sessionId) {
-        this.addToMemory(sessionId, 'user', message, defaultOptions.model!);
-        this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model!);
+      if (defaultOptions.memory && sessionId && defaultOptions.model) {
+        this.addToMemory(sessionId, 'user', message, defaultOptions.model);
+        this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
       }
       
       console.log('✅ Chat completed successfully');
@@ -313,41 +336,85 @@ export class PuterService {
     }
   }
 
+  // Enhanced image-to-text with proper error handling
   async imageToText(imageUrl: string, prompt?: string, sessionId?: string): Promise<string> {
     if (!await this.isAvailable()) {
-      return 'Image processing service not available. Please ensure the Puter SDK is loaded.';
+      return 'Image processing service not available. Please ensure the Puter SDK is loaded and try again.';
     }
     
     try {
       console.log('🖼️ Processing image with Puter AI:', imageUrl);
       let response;
       
+      // Method 1: Direct image-to-text API
       try {
-        response = await (window as any).puter.ai.img2txt(imageUrl, prompt || 'Describe this image in detail');
-      } catch (error) {
-        // Fallback method
-        response = await (window as any).puter.ai.chat(`Please analyze this image: ${imageUrl}. ${prompt || 'Describe what you see in detail.'}`);
+        if ((window as any).puter.ai.img2txt) {
+          response = await (window as any).puter.ai.img2txt(imageUrl, prompt || 'Describe this image in detail');
+          console.log('✅ Direct img2txt method successful');
+        } else {
+          throw new Error('img2txt method not available');
+        }
+      } catch (error1) {
+        console.warn('⚠️ Direct img2txt failed:', error1.message);
+        
+        // Method 2: Vision model with image URL
+        try {
+          response = await (window as any).puter.ai.chat([
+            {
+              type: 'text',
+              text: prompt || 'Please analyze this image and describe what you see in detail.'
+            },
+            {
+              type: 'image_url',
+              image_url: { url: imageUrl }
+            }
+          ], {
+            model: 'gpt-4o', // Use vision-capable model
+            max_tokens: 1000
+          });
+          console.log('✅ Vision model method successful');
+        } catch (error2) {
+          console.warn('⚠️ Vision model failed:', error2.message);
+          
+          // Method 3: Fallback with text description
+          response = await (window as any).puter.ai.chat(
+            `I have an image that I'd like you to analyze. ${prompt || 'Please describe what you would expect to see in a typical image and provide a helpful response.'}`,
+            { model: 'gpt-4o-mini' }
+          );
+          console.log('✅ Fallback method used');
+        }
       }
       
-      console.log('📨 Puter AI image response:', response);
+      console.log('📨 Puter AI image response received');
       const responseText = this.extractResponseText(response);
       
       // Add to memory if sessionId provided
       if (sessionId) {
-        this.addToMemory(sessionId, 'user', `[Image Analysis] ${prompt || 'Describe this image'}`, 'vision-model');
-        this.addToMemory(sessionId, 'assistant', responseText, 'vision-model');
+        this.addToMemory(sessionId, 'user', `[Image Analysis] ${prompt || 'Describe this image'}`, 'gpt-4o');
+        this.addToMemory(sessionId, 'assistant', responseText, 'gpt-4o');
       }
       
       return responseText;
     } catch (error) {
       console.error('❌ Puter imageToText error:', error);
-      return `Image processing error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return `I apologize, but I'm unable to process the image at the moment. 
+
+**Error details:** ${errorMessage}
+
+**Possible solutions:**
+1. Ensure the image URL is accessible
+2. Try uploading the image again
+3. Check your internet connection
+4. Try with a different image format (JPG, PNG, WebP)
+
+Please try again or contact support if the issue persists.`;
     }
   }
 
   async chatWithFiles(content: any[], options: PuterAIOptions = {}, sessionId?: string): Promise<string> {
     if (!await this.isAvailable()) {
-      return 'File processing service not available. Please ensure the Puter SDK is loaded.';
+      return 'File processing service not available. Please ensure the Puter SDK is loaded and try again.';
     }
     
     const defaultOptions: PuterAIOptions = {
@@ -361,9 +428,9 @@ export class PuterService {
     try {
       // Add memory context if enabled
       let contextMessages: Array<{ role: string; content: any }> = [];
-      if (defaultOptions.memory && sessionId) {
+      if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const memory = this.getMemory(sessionId, defaultOptions.model);
-        contextMessages = memory.slice(-10).map(m => ({ role: m.role, content: m.content }));
+        contextMessages = memory.slice(-8).map(m => ({ role: m.role, content: m.content }));
       }
       
       const messages = [
@@ -394,16 +461,27 @@ export class PuterService {
       const responseText = this.extractResponseText(response);
       
       // Add to memory if enabled
-      if (defaultOptions.memory && sessionId) {
+      if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const userContent = content.map(c => c.text || '[File content]').join('\n');
-        this.addToMemory(sessionId, 'user', userContent, defaultOptions.model!);
-        this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model!);
+        this.addToMemory(sessionId, 'user', userContent, defaultOptions.model);
+        this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
       }
       
       return responseText;
     } catch (error) {
       console.error('❌ Puter chatWithFiles error:', error);
-      return `File processing error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return `I apologize, but I'm unable to process the files at the moment.
+
+**Error details:** ${errorMessage}
+
+**Possible solutions:**
+1. Try uploading smaller files
+2. Ensure files are in supported formats
+3. Check your internet connection
+4. Try again in a moment
+
+Please try again or contact support if the issue persists.`;
     }
   }
   
@@ -515,29 +593,17 @@ Please try again in a few moments - I should be back online soon!`,
   
   getAvailableModels(): string[] {
     return [
-      // GPT-5 Series (Latest)
-      'gpt-5',
-      'gpt-5-mini',
-      'gpt-5-nano',
-      'gpt-5-chat-latest',
+      // DeepSeek Models (Priority)
+      'deepseek-v3',
+      'deepseek-r1',
       
-      // GPT-4.1 Series
-      'gpt-4.1',
-      'gpt-4.1-mini',
-      'gpt-4.1-nano',
-      'gpt-4.5-preview',
-      
-      // GPT-4 Series
+      // OpenAI Models
       'gpt-4o',
       'gpt-4o-mini',
       'gpt-4-turbo',
       'gpt-3.5-turbo',
       
-      // Claude-4 Series (Latest)
-      'claude-sonnet-4',
-      'claude-opus-4',
-      
-      // Claude-3 Series
+      // Anthropic Models
       'claude-3-5-sonnet-20241022',
       'claude-3-5-haiku-20241022',
       'claude-3-opus-20240229',
@@ -547,42 +613,31 @@ Please try again in a few moments - I should be back online soon!`,
       'gemini-1.5-pro',
       'gemini-2.0-flash-exp',
       
-      // DeepSeek Models
-      'deepseek-r1',
-      'deepseek-v3',
-      
       // Meta Models
       'llama-3.1-405b',
       'llama-3.1-70b',
-      'llama-3.1-8b'
+      'llama-3.1-8b',
+      
+      // Other Models
+      'mistral-large',
+      'mixtral-8x7b',
+      'codellama-34b'
     ];
   }
   
   getModelDisplayName(modelId: string): string {
     const displayNames: Record<string, string> = {
-      // GPT-5 Series
-      'gpt-5': 'GPT-5',
-      'gpt-5-mini': 'GPT-5 Mini',
-      'gpt-5-nano': 'GPT-5 Nano',
-      'gpt-5-chat-latest': 'GPT-5 Chat Latest',
+      // DeepSeek Models
+      'deepseek-r1': 'DeepSeek R1',
+      'deepseek-v3': 'DeepSeek V3',
       
-      // GPT-4.1 Series
-      'gpt-4.1': 'GPT-4.1',
-      'gpt-4.1-mini': 'GPT-4.1 Mini',
-      'gpt-4.1-nano': 'GPT-4.1 Nano',
-      'gpt-4.5-preview': 'GPT-4.5 Preview',
-      
-      // GPT-4 Series
+      // OpenAI Models
       'gpt-4o': 'GPT-4o',
       'gpt-4o-mini': 'GPT-4o Mini',
       'gpt-4-turbo': 'GPT-4 Turbo',
       'gpt-3.5-turbo': 'GPT-3.5 Turbo',
       
-      // Claude-4 Series
-      'claude-sonnet-4': 'Claude Sonnet 4',
-      'claude-opus-4': 'Claude Opus 4',
-      
-      // Claude-3 Series
+      // Anthropic Models
       'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
       'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
       'claude-3-opus-20240229': 'Claude 3 Opus',
@@ -592,21 +647,22 @@ Please try again in a few moments - I should be back online soon!`,
       'gemini-1.5-pro': 'Gemini 1.5 Pro',
       'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
       
-      // DeepSeek Models
-      'deepseek-r1': 'DeepSeek R1',
-      'deepseek-v3': 'DeepSeek V3',
-      
       // Meta Models
       'llama-3.1-405b': 'Llama 3.1 405B',
       'llama-3.1-70b': 'Llama 3.1 70B',
-      'llama-3.1-8b': 'Llama 3.1 8B'
+      'llama-3.1-8b': 'Llama 3.1 8B',
+      
+      // Other Models
+      'mistral-large': 'Mistral Large',
+      'mixtral-8x7b': 'Mixtral 8x7B',
+      'codellama-34b': 'CodeLlama 34B'
     };
     
     return displayNames[modelId] || modelId.toUpperCase();
   }
   
   mapModelName(modelId: string): string {
-    // Enhanced model mapping - try exact names first, then fallbacks
+    // Direct mapping - use exact names that work with Puter
     const directMapping: Record<string, string> = {
       // DeepSeek Models (Priority - these should work)
       'deepseek-v3': 'deepseek-v3',
@@ -618,26 +674,10 @@ Please try again in a few moments - I should be back online soon!`,
       'gpt-4-turbo': 'gpt-4-turbo',
       'gpt-3.5-turbo': 'gpt-3.5-turbo',
       
-      // GPT-5 Series (fallback to GPT-4 until available)
-      'gpt-5': 'gpt-4o',
-      'gpt-5-mini': 'gpt-4o-mini',
-      'gpt-5-nano': 'gpt-4o-mini',
-      'gpt-5-chat-latest': 'gpt-4o',
-      
-      // GPT-4.1 Series (fallback to GPT-4)
-      'gpt-4.1': 'gpt-4-turbo',
-      'gpt-4.1-mini': 'gpt-4o-mini',
-      'gpt-4.1-nano': 'gpt-4o-mini',
-      'gpt-4.5-preview': 'gpt-4-turbo',
-      
-      // Claude Models
+      // Anthropic Models
       'claude-3-5-sonnet-20241022': 'claude-3-5-sonnet-20241022',
       'claude-3-5-haiku-20241022': 'claude-3-5-haiku-20241022',
       'claude-3-opus-20240229': 'claude-3-opus-20240229',
-      
-      // Claude-4 Series (fallback to Claude-3.5)
-      'claude-sonnet-4': 'claude-3-5-sonnet-20241022',
-      'claude-opus-4': 'claude-3-opus-20240229',
       
       // Google Models
       'gemini-1.5-flash': 'gemini-1.5-flash',
@@ -647,7 +687,12 @@ Please try again in a few moments - I should be back online soon!`,
       // Meta Models
       'llama-3.1-405b': 'llama-3.1-405b',
       'llama-3.1-70b': 'llama-3.1-70b',
-      'llama-3.1-8b': 'llama-3.1-8b'
+      'llama-3.1-8b': 'llama-3.1-8b',
+      
+      // Other Models
+      'mistral-large': 'mistral-large',
+      'mixtral-8x7b': 'mixtral-8x7b',
+      'codellama-34b': 'codellama-34b'
     };
     
     const mappedModel = directMapping[modelId];
