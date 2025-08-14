@@ -4,7 +4,7 @@ import { AppSidebar } from "./AppSidebar";
 import { EnhancedChatContainer } from "./EnhancedChatContainer";
 import { SettingsDialog } from "./SettingsDialog";
 import { Button } from "@/components/ui/button";
-import { Settings, Sparkles } from "lucide-react";
+import { Settings } from "lucide-react";
 
 export function Layout() {
   const [currentChatId, setCurrentChatId] = useState<string>();
