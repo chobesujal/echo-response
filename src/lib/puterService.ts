@@ -266,11 +266,11 @@ export class PuterService {
         try {
           localStorage.removeItem(`chat-memory-${key}`);
         } catch (error) {
-          console.warn('Failed to clear memory from localStorage:', error);
+          console.error('Failed to fix DeepSeek V3:', error);
         }
       });
       console.log(`Cleared memory for session ${sessionId}: ${keysToDelete.length} models`);
-    }
+      console.error('Error testing models:', error);
   }
   
   async chat(message: string, options: PuterAIOptions = {}, sessionId?: string): Promise<string> {
@@ -343,12 +343,12 @@ export class PuterService {
             // Method 4: Fallback to default model
             try {
               response = await (window as any).puter.ai.chat(message);
-              console.log('✅ Method 4 (fallback) successful');
+        console.warn('DeepSeek V3 not available, attempting to fix...');
             } catch (error4) {
               lastError = error4;
               console.error('❌ All methods failed');
               throw new Error(`All API methods failed. Last error: ${error4.message}`);
-            }
+            console.log('DeepSeek V3 fixed and available');
           }
         }
       }
