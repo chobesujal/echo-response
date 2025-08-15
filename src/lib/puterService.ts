@@ -56,64 +56,8 @@ export class PuterService {
   async testAvailableModels(): Promise<void> {
     const testModels = [
       // DeepSeek Models (Priority)
-    
-    console.log('Testing model availability...');
-    
-    for (const model of testModels) {
-      try {
-        const response = await this.quickTest(model);
-        if (response && response.length > 0 && !response.toLowerCase().includes('error')) {
-          this.availableModels.add(model);
-          console.log(`Model ${model} is available`);
-        }
-      } catch (error) {
-        console.warn(`Model ${model} failed test:`, error);
-      }
-      
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    console.log('Available models:', Array.from(this.availableModels));
-    
-    // Ensure DeepSeek V3 is working
-    if (!this.availableModels.has('deepseek-v3')) {
-      console.warn('DeepSeek V3 not available, attempting to fix...');
-      try {
-        const response = await this.forceTestModel('deepseek-v3');
-        if (response) {
-          this.availableModels.add('deepseek-v3');
-          console.log('DeepSeek V3 fixed and available');
-        }
-      } catch (error) {
-        console.error('Failed to fix DeepSeek V3:', error);
-      }
-    }
-  }
-  
-  // Load memory from localStorage on initialization
-  private loadMemoryFromStorage() {
-    try {
-      const keys = Object.keys(localStorage).filter(key => key.startsWith('chat-memory-'));
-      keys.forEach(key => {
-        const memoryData = localStorage.getItem(key);
-        if (memoryData) {
-          const memory = JSON.parse(memoryData);
-          const memoryKey = key.replace('chat-memory-', '');
-          this.chatMemory.set(memoryKey, {
-            ...memory,
-            messages: memory.messages.map((m: any) => ({
-              ...m,
-              timestamp: new Date(m.timestamp)
-            }))
-          });
-        }
-      });
-      console.log('Loaded memory for', this.chatMemory.size, 'sessions');
-    } catch (error) {
-      console.warn('Failed to load memory from localStorage:', error);
-    }
-  }
+      'deepseek-v3',
+      'deepseek-r1',
       
       // OpenAI Models
       'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo',
@@ -162,6 +106,30 @@ export class PuterService {
       } catch (error) {
         console.error('❌ Failed to fix DeepSeek V3:', error);
       }
+    }
+  }
+  
+  // Load memory from localStorage on initialization
+  private loadMemoryFromStorage() {
+    try {
+      const keys = Object.keys(localStorage).filter(key => key.startsWith('chat-memory-'));
+      keys.forEach(key => {
+        const memoryData = localStorage.getItem(key);
+        if (memoryData) {
+          const memory = JSON.parse(memoryData);
+          const memoryKey = key.replace('chat-memory-', '');
+          this.chatMemory.set(memoryKey, {
+            ...memory,
+            messages: memory.messages.map((m: any) => ({
+              ...m,
+              timestamp: new Date(m.timestamp)
+            }))
+          });
+        }
+      });
+      console.log('Loaded memory for', this.chatMemory.size, 'sessions');
+    } catch (error) {
+      console.warn('Failed to load memory from localStorage:', error);
     }
   }
   
@@ -273,23 +241,11 @@ export class PuterService {
     } catch (error) {
       console.warn('Failed to load memory from localStorage:', error);
     }
-    // Try to load from localStorage first
-    try {
-      const saved = localStorage.getItem(`chat-memory-${memoryKey}`);
-      if (saved) {
-        const memory = JSON.parse(saved);
-        this.chatMemory.set(memoryKey, memory);
-        return memory.messages.map((m: any) => ({ role: m.role, content: m.content }));
-      }
-    } catch (error) {
-      console.warn('Failed to load memory from localStorage:', error);
-    }
     
     const memory = this.chatMemory.get(memoryKey);
     const messages = memory ? memory.messages.map(m => ({ role: m.role, content: m.content })) : [];
     console.log(`Retrieved memory for ${memoryKey}: ${messages.length} messages`);
     return messages;
-    return memory ? memory.messages.map(m => ({ role: m.role, content: m.content })) : [];
   }
   
   clearMemory(sessionId: string, model?: string) {
