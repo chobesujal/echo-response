@@ -311,7 +311,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
         <div className="absolute -top-16 sm:-top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-medium shadow-lg animate-fade-in">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            Listening... Speak now or click to stop
+            🎤 Listening... Speak now or click to stop
           </div>
         </div>
       )}

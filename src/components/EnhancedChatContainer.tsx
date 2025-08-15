@@ -88,7 +88,7 @@ export const EnhancedChatContainer = ({
 }: EnhancedChatContainerProps) => {
   const [messages, setMessages] = useState<Message[]>([{
     id: "welcome",
-    text: "Hello! I'm **Cosmic AI**, your advanced AI assistant with access to multiple cutting-edge AI models including DeepSeek, GPT-4, Claude, Gemini, and more.\n\n**What I can help you with:**\n• **Coding & Development** - Write, debug, and explain code in 50+ languages\n• **Creative Writing** - Stories, articles, scripts, and more\n• **Analysis & Research** - Data analysis, research, and insights\n• **Problem Solving** - Step-by-step solutions and explanations\n• **Image Analysis** - Describe and analyze uploaded images\n• **File Processing** - Work with documents, code files, and more\n\n**Choose your preferred AI model** from the dropdown above and let's start our conversation!",
+    text: "Hello! I'm **Cosmic AI**, your advanced AI assistant with access to multiple cutting-edge AI models including DeepSeek, GPT-4, Claude, Gemini, and more.\n\n🚀 **What I can help you with:**\n• **Coding & Development** - Write, debug, and explain code in 50+ languages\n• **Creative Writing** - Stories, articles, scripts, and more\n• **Analysis & Research** - Data analysis, research, and insights\n• **Problem Solving** - Step-by-step solutions and explanations\n• **Image Analysis** - Describe and analyze uploaded images\n• **File Processing** - Work with documents, code files, and more\n\n💡 **Choose your preferred AI model** from the dropdown above and let's start our conversation!",
     isUser: false,
     timestamp: new Date(),
     model: 'system'
@@ -520,11 +520,26 @@ export const EnhancedChatContainer = ({
   };
 
   const getModelStatusBadge = (model: string) => {
-    return null;
+    const status = modelStatus[model];
+    if (status === 'working') {
+      return <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">✅ Live</Badge>;
+    } else if (status === 'error') {
+      return <Badge variant="secondary" className="ml-2 text-xs bg-red-100 text-red-700 border-red-200">❌ Error</Badge>;
+    } else if (status === 'testing') {
+      return <Badge variant="secondary" className="ml-2 text-xs bg-yellow-100 text-yellow-700 border-yellow-200">🧪 Testing</Badge>;
+    }
+    return <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700 border-blue-200">⚡ Ready</Badge>;
   };
 
   const getModelIcon = (model: string) => {
-    return '';
+    if (model.includes('deepseek')) return '🧠';
+    if (model.includes('gpt')) return '🤖';
+    if (model.includes('claude')) return '🎭';
+    if (model.includes('gemini')) return '💎';
+    if (model.includes('llama')) return '🦙';
+    if (model.includes('mistral')) return '🌪️';
+    if (model.includes('code')) return '💻';
+    return '🚀';
   };
 
   return (
@@ -547,6 +562,7 @@ export const EnhancedChatContainer = ({
           <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
             <SelectTrigger className="w-40 sm:w-56 bg-muted/50 border border-border/50 text-foreground text-xs sm:text-sm rounded-xl hover:bg-muted/70 transition-colors">
               <div className="flex items-center gap-2">
+                <span className="text-lg">{getModelIcon(selectedModel)}</span>
                 <SelectValue />
               </div>
             </SelectTrigger>
@@ -559,7 +575,11 @@ export const EnhancedChatContainer = ({
                   {models.map(model => (
                     <SelectItem key={model} value={model} className="hover:bg-accent/50 text-xs sm:text-sm py-3">
                       <div className="flex items-center justify-between w-full">
-                        <span className="truncate font-medium">{modelDisplayNames[model as Model]}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{getModelIcon(model)}</span>
+                          <span className="truncate font-medium">{modelDisplayNames[model as Model]}</span>
+                        </div>
+                        {getModelStatusBadge(model)}
                       </div>
                     </SelectItem>
                   ))}
