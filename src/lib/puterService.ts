@@ -56,29 +56,6 @@ export class PuterService {
   async testAvailableModels(): Promise<void> {
     const testModels = [
       // DeepSeek Models (Priority)
-  // Load memory from localStorage on initialization
-  private loadMemoryFromStorage() {
-    try {
-      const keys = Object.keys(localStorage).filter(key => key.startsWith('chat-memory-'));
-      keys.forEach(key => {
-        const memoryData = localStorage.getItem(key);
-        if (memoryData) {
-          const memory = JSON.parse(memoryData);
-          const memoryKey = key.replace('chat-memory-', '');
-          this.chatMemory.set(memoryKey, {
-            ...memory,
-            messages: memory.messages.map((m: any) => ({
-              ...m,
-              timestamp: new Date(m.timestamp)
-            }))
-          });
-        }
-      });
-      console.log('Loaded memory for', this.chatMemory.size, 'sessions');
-    } catch (error) {
-      console.warn('Failed to load memory from localStorage:', error);
-    }
-  }
       'deepseek-v3', 'deepseek-r1',
       
       // OpenAI Models
@@ -212,7 +189,6 @@ export class PuterService {
     // Save to localStorage for persistence
     try {
       localStorage.setItem(`chat-memory-${memoryKey}`, JSON.stringify(memory));
-      console.log(`Memory saved for ${memoryKey}: ${memory.messages.length} messages`);
     } catch (error) {
       console.warn('Failed to save memory to localStorage:', error);
     }
@@ -221,24 +197,6 @@ export class PuterService {
   getMemory(sessionId: string, model: string): Array<{ role: string; content: string }> {
     const memoryKey = `${sessionId}-${model}`;
     
-    // Always check localStorage first for the most recent data
-    try {
-      const saved = localStorage.getItem(`chat-memory-${memoryKey}`);
-      if (saved) {
-        const memory = JSON.parse(saved);
-        this.chatMemory.set(memoryKey, {
-          ...memory,
-          messages: memory.messages.map((m: any) => ({
-            ...m,
-            timestamp: new Date(m.timestamp)
-          }))
-        });
-        console.log(`Memory loaded for ${memoryKey}: ${memory.messages.length} messages`);
-        return memory.messages.map((m: any) => ({ role: m.role, content: m.content }));
-      }
-    } catch (error) {
-      console.warn('Failed to load memory from localStorage:', error);
-    }
     // Try to load from localStorage first
     try {
       const saved = localStorage.getItem(`chat-memory-${memoryKey}`);
@@ -252,9 +210,6 @@ export class PuterService {
     }
     
     const memory = this.chatMemory.get(memoryKey);
-    const messages = memory ? memory.messages.map(m => ({ role: m.role, content: m.content })) : [];
-    console.log(`Retrieved memory for ${memoryKey}: ${messages.length} messages`);
-    return messages;
     return memory ? memory.messages.map(m => ({ role: m.role, content: m.content })) : [];
   }
   
@@ -264,7 +219,6 @@ export class PuterService {
       this.chatMemory.delete(memoryKey);
       try {
         localStorage.removeItem(`chat-memory-${memoryKey}`);
-        console.log(`Memory cleared for ${memoryKey}`);
       } catch (error) {
         console.warn('Failed to clear memory from localStorage:', error);
       }
@@ -279,7 +233,6 @@ export class PuterService {
           console.warn('Failed to clear memory from localStorage:', error);
         }
       });
-      console.log(`Cleared memory for session ${sessionId}: ${keysToDelete.length} models`);
     }
   }
   
@@ -306,7 +259,6 @@ export class PuterService {
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const memory = this.getMemory(sessionId, defaultOptions.model);
         contextMessages = [...memory.slice(-10)]; // Use last 10 messages for context
-        console.log(`Using context: ${contextMessages.length} messages for ${defaultOptions.model}`);
       }
       
       const puterModel = this.mapModelName(defaultOptions.model!);
@@ -374,7 +326,6 @@ export class PuterService {
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         this.addToMemory(sessionId, 'user', message, defaultOptions.model);
         this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
-        console.log(`Added to memory for ${defaultOptions.model}: user + assistant messages`);
       }
       
       console.log('✅ Chat completed successfully');
@@ -480,7 +431,6 @@ Please try again or contact support if the issue persists.`;
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const memory = this.getMemory(sessionId, defaultOptions.model);
         contextMessages = memory.slice(-8).map(m => ({ role: m.role, content: m.content }));
-        console.log(`Using file context: ${contextMessages.length} messages for ${defaultOptions.model}`);
       }
       
       const messages = [

@@ -11,7 +11,7 @@ import {
   Mic, 
   MicOff, 
   Upload, 
-  ImageIcon, 
+  Image as ImageIcon, 
   FileText, 
   ChevronDown,
   Volume2,

@@ -5,7 +5,7 @@ import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/pris
 import { Copy, Check, Play, Eye, Download, Maximize2, Code2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AdvancedCodeContainer } from "./AdvancedCodeContainer";
+import { AdvancedCodePreview } from "./AdvancedCodePreview";
 import { useTheme } from "next-themes";
 
 interface ChatMessageProps {
