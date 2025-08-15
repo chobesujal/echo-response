@@ -56,6 +56,41 @@ export class PuterService {
   async testAvailableModels(): Promise<void> {
     const testModels = [
       // DeepSeek Models (Priority)
+    
+    console.log('Testing model availability...');
+    
+    for (const model of testModels) {
+      try {
+        const response = await this.quickTest(model);
+        if (response && response.length > 0 && !response.toLowerCase().includes('error')) {
+          this.availableModels.add(model);
+          console.log(`Model ${model} is available`);
+        }
+      } catch (error) {
+        console.warn(`Model ${model} failed test:`, error);
+      }
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.log('Available models:', Array.from(this.availableModels));
+    
+    // Ensure DeepSeek V3 is working
+    if (!this.availableModels.has('deepseek-v3')) {
+      console.warn('DeepSeek V3 not available, attempting to fix...');
+      try {
+        const response = await this.forceTestModel('deepseek-v3');
+        if (response) {
+          this.availableModels.add('deepseek-v3');
+          console.log('DeepSeek V3 fixed and available');
+        }
+      } catch (error) {
+        console.error('Failed to fix DeepSeek V3:', error);
+      }
+    }
+  }
+  
   // Load memory from localStorage on initialization
   private loadMemoryFromStorage() {
     try {
@@ -79,7 +114,6 @@ export class PuterService {
       console.warn('Failed to load memory from localStorage:', error);
     }
   }
-      'deepseek-v3', 'deepseek-r1',
       
       // OpenAI Models
       'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo',
