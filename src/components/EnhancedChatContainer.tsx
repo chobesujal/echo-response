@@ -7,10 +7,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Trash2, RefreshCw, Copy, Download, Share, Code, Brain, Search, Zap, Menu } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Trash2, RefreshCw, Copy, Download, Share, Code, Brain, Search, Zap, Menu, X, ChevronDown, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { puterService } from "@/lib/puterService";
+import { Separator } from "@/components/ui/separator";
 
 interface Message {
   id: string;
@@ -90,7 +91,7 @@ export const EnhancedChatContainer = ({
 }: EnhancedChatContainerProps) => {
   const [messages, setMessages] = useState<Message[]>([{
     id: "welcome",
-    text: "Hello! I'm Cosmic AI, your advanced AI assistant with access to multiple cutting-edge AI models including DeepSeek, GPT-4o, Claude, Gemini, and more.\n\nWhat I can help you with:\n• Coding & Development - Write, debug, and explain code in 50+ languages\n• Creative Writing - Stories, articles, scripts, and more\n• Analysis & Research - Data analysis, research, and insights\n• Problem Solving - Step-by-step solutions and explanations\n• Image Analysis - Describe and analyze uploaded images\n• File Processing - Work with documents, code files, and more\n\nChoose your preferred AI model from the Reasoning Models dropdown and let's start our conversation!",
+    text: "Hello! I'm Cosmic AI, your advanced AI assistant with access to multiple cutting-edge AI models.\n\nWhat I can help you with:\n• Coding & Development - Write, debug, and explain code in 50+ languages\n• Creative Writing - Stories, articles, scripts, and more\n• Analysis & Research - Data analysis, research, and insights\n• Problem Solving - Step-by-step solutions and explanations\n• Image Analysis - Describe and analyze uploaded images\n• File Processing - Work with documents, code files, and more\n\nChoose your preferred AI model from the Reasoning model dropdown and let's start our conversation!",
     isUser: false,
     timestamp: new Date(),
     model: 'system'
@@ -105,6 +106,7 @@ export const EnhancedChatContainer = ({
   const [sandboxOpen, setSandboxOpen] = useState(false);
   const [sandboxCode, setSandboxCode] = useState('');
   const [sandboxLanguage, setSandboxLanguage] = useState('javascript');
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -121,16 +123,16 @@ export const EnhancedChatContainer = ({
             description: "All AI models are now available for use."
           });
           
-          // Test DeepSeek V3 specifically
-          try {
-            const testResponse = await puterService.chat('Hi', { model: 'deepseek-v3', max_tokens: 10 }, sessionId);
-            if (testResponse && testResponse.length > 0) {
-              console.log('DeepSeek V3 is working properly');
-              setModelStatus(prev => ({ ...prev, 'deepseek-v3': 'working' }));
+          // Test all models
+          const models = puterService.getAvailableModels();
+          for (const model of models) {
+            try {
+              setModelStatus(prev => ({ ...prev, [model]: 'testing' }));
+              const isWorking = await puterService.testModel(model);
+              setModelStatus(prev => ({ ...prev, [model]: isWorking ? 'working' : 'error' }));
+            } catch (error) {
+              setModelStatus(prev => ({ ...prev, [model]: 'error' }));
             }
-          } catch (error) {
-            console.error('DeepSeek V3 test failed:', error);
-            setModelStatus(prev => ({ ...prev, 'deepseek-v3': 'error' }));
           }
         } else {
           console.error('Failed to initialize Puter service');
@@ -150,7 +152,7 @@ export const EnhancedChatContainer = ({
       }
     };
     initializePuter();
-  }, [toast, sessionId]);
+  }, [toast]);
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
@@ -259,6 +261,9 @@ export const EnhancedChatContainer = ({
 
   const handleSendMessage = async (text: string, files?: File[], mode?: 'thinking' | 'search' | 'normal') => {
     if (!text.trim() && (!files || files.length === 0)) return;
+
+    // Hide suggestions after first message
+    setShowSuggestions(false);
 
     let messageText = text;
     let processedFiles: any[] = [];
@@ -412,6 +417,16 @@ export const EnhancedChatContainer = ({
       const finalMessages = [...updatedMessages, aiResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
+
+      // Auto-open sandbox for code responses
+      if (aiCodeDetection.hasCode && aiCodeDetection.code && aiCodeDetection.language) {
+        const webLanguages = ['html', 'css', 'javascript', 'jsx', 'tsx', 'vue', 'svelte'];
+        if (webLanguages.includes(aiCodeDetection.language)) {
+          setSandboxCode(aiCodeDetection.code);
+          setSandboxLanguage(aiCodeDetection.language);
+          setSandboxOpen(true);
+        }
+      }
       
     } catch (error) {
       console.error('Puter AI Error:', error);
@@ -466,7 +481,7 @@ export const EnhancedChatContainer = ({
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
-      text: "Hello! I'm Cosmic AI, your advanced AI assistant with access to multiple cutting-edge AI models including DeepSeek, GPT-4o, Claude, Gemini, and more.\n\nWhat I can help you with:\n• Coding & Development - Write, debug, and explain code in 50+ languages\n• Creative Writing - Stories, articles, scripts, and more\n• Analysis & Research - Data analysis, research, and insights\n• Problem Solving - Step-by-step solutions and explanations\n• Image Analysis - Describe and analyze uploaded images\n• File Processing - Work with documents, code files, and more\n\nChoose your preferred AI model from the Reasoning Models dropdown and let's start our conversation!",
+      text: "Hello! I'm Cosmic AI, your advanced AI assistant with access to multiple cutting-edge AI models.\n\nWhat I can help you with:\n• Coding & Development - Write, debug, and explain code in 50+ languages\n• Creative Writing - Stories, articles, scripts, and more\n• Analysis & Research - Data analysis, research, and insights\n• Problem Solving - Step-by-step solutions and explanations\n• Image Analysis - Describe and analyze uploaded images\n• File Processing - Work with documents, code files, and more\n\nChoose your preferred AI model from the Reasoning model dropdown and let's start our conversation!",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -475,6 +490,7 @@ export const EnhancedChatContainer = ({
     setStreamingText("");
     setIsStreaming(false);
     setStreamingMessageId(null);
+    setShowSuggestions(true);
     
     // Clear memory for current session and model
     puterService.clearMemory(sessionId, selectedModel);
@@ -568,6 +584,19 @@ export const EnhancedChatContainer = ({
     return <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700 border-blue-200">Ready</Badge>;
   };
 
+  const suggestionPrompts = [
+    "Write a React component for a todo list",
+    "Create a Python script for data analysis",
+    "Build a responsive landing page with HTML/CSS",
+    "Explain how machine learning works",
+    "Help me debug this JavaScript code",
+    "Write a Vue.js component with animations"
+  ];
+
+  const handleSuggestionClick = (suggestion: string) => {
+    handleSendMessage(suggestion, [], 'normal');
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header redesigned based on reference image */}
@@ -577,12 +606,13 @@ export const EnhancedChatContainer = ({
             <Menu className="w-4 h-4" />
           </Button>
           
-          {/* Reasoning Models Section */}
+          {/* Reasoning model section */}
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-foreground">Reasoning model</span>
             <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
               <SelectTrigger className="w-56 bg-background border border-border text-foreground text-sm rounded-lg hover:bg-muted/50 transition-colors">
                 <SelectValue />
+                <ChevronDown className="w-4 h-4 opacity-50" />
               </SelectTrigger>
               <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[400px] overflow-y-auto rounded-lg shadow-xl">
                 {Object.entries(modelCategories).map(([category, models]) => (
@@ -607,26 +637,6 @@ export const EnhancedChatContainer = ({
         
         {/* Action buttons */}
         <div className="flex items-center gap-2">
-          <Dialog open={sandboxOpen} onOpenChange={setSandboxOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Code className="w-4 h-4" />
-                Sandbox
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-7xl h-[80vh] p-0">
-              <DialogHeader className="p-4 border-b">
-                <DialogTitle>Code Sandbox Environment</DialogTitle>
-              </DialogHeader>
-              <div className="flex-1 overflow-hidden">
-                <SandboxEnvironment 
-                  initialCode={sandboxCode} 
-                  initialLanguage={sandboxLanguage} 
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
-          
           <Button 
             variant="ghost" 
             size="sm" 
@@ -691,6 +701,25 @@ export const EnhancedChatContainer = ({
             </div>
           )}
           {isTyping && !isStreaming && <TypingIndicator />}
+          
+          {/* Suggestion prompts for new chats */}
+          {showSuggestions && messages.length === 1 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
+              {suggestionPrompts.map((prompt, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  className="p-4 h-auto text-left justify-start hover:bg-muted/50 border-border/30"
+                  onClick={() => handleSuggestionClick(prompt)}
+                >
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
+                    <span className="text-sm">{prompt}</span>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
       </ScrollArea>
 
@@ -700,6 +729,31 @@ export const EnhancedChatContainer = ({
           <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
         </div>
       </div>
+
+      {/* Sandbox Dialog */}
+      <Dialog open={sandboxOpen} onOpenChange={setSandboxOpen}>
+        <DialogContent className="max-w-7xl h-[90vh] p-0">
+          <DialogHeader className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <Code className="w-5 h-5" />
+                Code Sandbox Environment
+              </DialogTitle>
+              <Button variant="ghost" size="sm" onClick={() => setSandboxOpen(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            <SandboxEnvironment 
+              initialCode={sandboxCode} 
+              initialLanguage={sandboxLanguage}
+              isEmbedded={true}
+              onClose={() => setSandboxOpen(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

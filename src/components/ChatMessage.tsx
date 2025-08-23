@@ -2,10 +2,9 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Check, Play, Eye, Download, Maximize2, Code2 } from "lucide-react";
+import { Copy, Check, Play, Eye, Download, Maximize2, Code2, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AdvancedCodePreview } from "./AdvancedCodePreview";
 import { useTheme } from "next-themes";
 
 interface ChatMessageProps {
@@ -82,18 +81,72 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
                     const isInline = !className || !language;
                     const codeContent = String(children).replace(/\n$/, '');
                     
-                    if (!isInline && language && codeContent.length > 100) {
-                      // Use advanced code preview for longer code blocks
-                      const isExecutable = ['javascript', 'html', 'css', 'jsx', 'tsx', 'python', 'java', 'cpp', 'csharp'].includes(language);
+                    if (!isInline && language && codeContent.length > 50) {
+                      // Enhanced code block with sandbox integration
+                      const isWebCode = ['html', 'css', 'javascript', 'jsx', 'tsx', 'vue', 'svelte'].includes(language);
                       
                       return (
                         <div className="my-4">
-                          <AdvancedCodePreview
-                            code={codeContent}
-                            language={language}
-                            title={`${language.toUpperCase()} Code`}
-                            isExecutable={isExecutable}
-                          />
+                          <div className="relative group rounded-lg overflow-hidden border border-border/20 bg-muted/10">
+                            <div className="flex items-center justify-between bg-muted/30 px-3 py-2 border-b border-border/20">
+                              <div className="flex items-center gap-2">
+                                <Code2 className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs font-medium text-muted-foreground uppercase">{language}</span>
+                                {isWebCode && (
+                                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                                    Preview Available
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyToClipboard(codeContent)}
+                                  className="h-6 w-6 p-0 hover:bg-muted/50"
+                                  title="Copy code"
+                                >
+                                  {copiedCode === codeContent ? (
+                                    <Check className="w-3 h-3 text-green-500" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </Button>
+                                {isWebCode && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      // Trigger sandbox opening
+                                      const event = new CustomEvent('openSandbox', {
+                                        detail: { code: codeContent, language }
+                                      });
+                                      window.dispatchEvent(event);
+                                    }}
+                                    className="h-6 w-6 p-0 hover:bg-muted/50"
+                                    title="Open in sandbox"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            <SyntaxHighlighter
+                              style={theme === 'dark' ? oneDark : oneLight}
+                              language={language}
+                              PreTag="div"
+                              className="!mt-0 !mb-0 text-sm"
+                              customStyle={{
+                                margin: 0,
+                                padding: '12px 16px',
+                                background: 'transparent',
+                                fontSize: '14px',
+                                lineHeight: '1.5'
+                              }}
+                            >
+                              {codeContent}
+                            </SyntaxHighlighter>
+                          </div>
                         </div>
                       );
                     } else if (!isInline && language) {

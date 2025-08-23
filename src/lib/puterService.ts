@@ -1,4 +1,4 @@
-// Enhanced Puter AI service with proper model management and image-to-text
+// Enhanced Puter AI service with proper model management and fixed memory
 export interface PuterAIOptions {
   model?: string;
   context?: Array<{ role: string; content: string }>;
@@ -52,7 +52,7 @@ export class PuterService {
   
   async testAvailableModels(): Promise<void> {
     const testModels = [
-      // Current working models
+      // Current working models with exact Puter names
       'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo',
       'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229',
       'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp',
@@ -68,30 +68,16 @@ export class PuterService {
         const response = await this.quickTest(model);
         if (response && response.length > 0 && !response.toLowerCase().includes('error')) {
           this.availableModels.add(model);
-          console.log(`Model ${model} is available`);
+          console.log(`✓ Model ${model} is available`);
         }
       } catch (error) {
-        console.warn(`Model ${model} failed test:`, error);
+        console.warn(`✗ Model ${model} failed test:`, error);
       }
       
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     console.log('Available models:', Array.from(this.availableModels));
-    
-    // Ensure DeepSeek V3 is working
-    if (!this.availableModels.has('deepseek-v3')) {
-      console.warn('DeepSeek V3 not available, attempting to fix...');
-      try {
-        const response = await this.forceTestModel('deepseek-v3');
-        if (response) {
-          this.availableModels.add('deepseek-v3');
-          console.log('DeepSeek V3 fixed and available');
-        }
-      } catch (error) {
-        console.error('Failed to fix DeepSeek V3:', error);
-      }
-    }
   }
   
   async quickTest(model: string): Promise<string> {
@@ -101,30 +87,6 @@ export class PuterService {
         max_tokens: 10,
         temperature: 0.1
       });
-      return this.extractResponseText(response);
-    } catch (error) {
-      throw error;
-    }
-  }
-  
-  async forceTestModel(model: string): Promise<string> {
-    try {
-      let response;
-      
-      try {
-        response = await (window as any).puter.ai.chat('Test', { model });
-      } catch (e1) {
-        try {
-          response = await (window as any).puter.ai.chat('Test');
-        } catch (e2) {
-          response = await (window as any).puter.ai.chat('Test', {
-            model: model,
-            max_tokens: 5,
-            temperature: 0.1
-          });
-        }
-      }
-      
       return this.extractResponseText(response);
     } catch (error) {
       throw error;
@@ -145,7 +107,7 @@ export class PuterService {
     }
   }
   
-  // Enhanced memory management with proper conversation continuity
+  // Fixed memory management with proper conversation continuity
   addToMemory(sessionId: string, role: string, content: string, model: string) {
     const memoryKey = `${sessionId}-${model}`;
     
@@ -234,35 +196,50 @@ export class PuterService {
     };
     
     try {
-      console.log('Calling Puter AI with:', { message: message.slice(0, 100), model: defaultOptions.model });
+      console.log('Calling Puter AI with:', { 
+        message: message.slice(0, 100), 
+        model: defaultOptions.model,
+        sessionId: sessionId 
+      });
       
       // Add chat memory if enabled and sessionId provided
       let contextMessages: Array<{ role: string; content: string }> = [];
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const memory = this.getMemory(sessionId, defaultOptions.model);
         contextMessages = [...memory.slice(-10)]; // Use last 10 messages for context
+        console.log(`Using ${contextMessages.length} messages from memory for context`);
       }
       
-      const puterModel = this.mapModelName(defaultOptions.model!);
-      console.log('Using Puter model:', defaultOptions.model, '->', puterModel);
+      const puterModel = defaultOptions.model!;
+      console.log('Using exact Puter model:', puterModel);
       
       let response;
       let lastError;
       
       // Method 1: Full featured call with context
       try {
-        response = await (window as any).puter.ai.chat(message, {
+        const requestPayload = {
           model: puterModel,
-          context: contextMessages.length > 0 ? contextMessages : undefined,
           max_tokens: defaultOptions.max_tokens,
           temperature: defaultOptions.temperature
-        });
-        console.log('Method 1 successful');
+        };
+        
+        if (contextMessages.length > 0) {
+          // Build conversation with context
+          const conversationMessages = [
+            ...contextMessages,
+            { role: 'user', content: message }
+          ];
+          response = await (window as any).puter.ai.chat(conversationMessages, requestPayload);
+        } else {
+          response = await (window as any).puter.ai.chat(message, requestPayload);
+        }
+        console.log('Method 1 successful with context');
       } catch (error1) {
         lastError = error1;
         console.warn('Method 1 failed:', error1.message);
         
-        // Method 2: Simple call with model
+        // Method 2: Simple call with model only
         try {
           response = await (window as any).puter.ai.chat(message, {
             model: puterModel,
@@ -273,7 +250,7 @@ export class PuterService {
           lastError = error2;
           console.warn('Method 2 failed:', error2.message);
           
-          // Method 3: Basic call
+          // Method 3: Basic call with just model
           try {
             response = await (window as any).puter.ai.chat(message, {
               model: puterModel
@@ -283,7 +260,7 @@ export class PuterService {
             lastError = error3;
             console.warn('Method 3 failed:', error3.message);
             
-            // Method 4: Fallback to default model
+            // Method 4: Fallback to default
             try {
               response = await (window as any).puter.ai.chat(message);
               console.log('Method 4 (fallback) successful');
@@ -303,10 +280,11 @@ export class PuterService {
         throw new Error('Empty or invalid response received');
       }
       
-      // Add to memory if enabled
+      // Add to memory if enabled - FIXED: Always add both user and assistant messages
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         this.addToMemory(sessionId, 'user', message, defaultOptions.model);
         this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
+        console.log('Added messages to memory for model:', defaultOptions.model);
       }
       
       console.log('Chat completed successfully');
@@ -407,11 +385,12 @@ Please try again or contact support if the issue persists.`;
     };
     
     try {
-      // Add memory context if enabled
+      // Add memory context if enabled - FIXED: Proper context building
       let contextMessages: Array<{ role: string; content: any }> = [];
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const memory = this.getMemory(sessionId, defaultOptions.model);
         contextMessages = memory.slice(-8).map(m => ({ role: m.role, content: m.content }));
+        console.log(`Using ${contextMessages.length} messages from memory for file chat`);
       }
       
       const messages = [
@@ -427,7 +406,7 @@ Please try again or contact support if the issue persists.`;
       let response;
       try {
         response = await (window as any).puter.ai.chat(messages, {
-          model: this.mapModelName(defaultOptions.model!),
+          model: defaultOptions.model!,
           max_tokens: defaultOptions.max_tokens,
           temperature: defaultOptions.temperature
         });
@@ -441,7 +420,7 @@ Please try again or contact support if the issue persists.`;
       console.log('Puter AI file response received');
       const responseText = this.extractResponseText(response);
       
-      // Add to memory if enabled
+      // Add to memory if enabled - FIXED: Proper memory addition
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const userContent = content.map(c => c.text || '[File content]').join('\n');
         this.addToMemory(sessionId, 'user', userContent, defaultOptions.model);
@@ -637,49 +616,6 @@ Please try again in a few moments - I should be back online soon!`,
     return displayNames[modelId] || modelId.toUpperCase();
   }
   
-  mapModelName(modelId: string): string {
-    // Direct mapping - use exact names that work with Puter
-    const directMapping: Record<string, string> = {
-      // DeepSeek Models (Priority - these should work)
-      'deepseek-v3': 'deepseek-v3',
-      'deepseek-r1': 'deepseek-r1',
-      
-      // OpenAI Models (Current)
-      'gpt-4o': 'gpt-4o',
-      'gpt-4o-mini': 'gpt-4o-mini',
-      'gpt-3.5-turbo': 'gpt-3.5-turbo',
-      
-      // Anthropic Models (Current)
-      'claude-3-5-sonnet-20241022': 'claude-3-5-sonnet-20241022',
-      'claude-3-5-haiku-20241022': 'claude-3-5-haiku-20241022',
-      'claude-3-opus-20240229': 'claude-3-opus-20240229',
-      
-      // Google Models (Current)
-      'gemini-1.5-flash': 'gemini-1.5-flash',
-      'gemini-1.5-pro': 'gemini-1.5-pro',
-      'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
-      
-      // Meta Models
-      'llama-3.1-405b': 'llama-3.1-405b',
-      'llama-3.1-70b': 'llama-3.1-70b',
-      'llama-3.1-8b': 'llama-3.1-8b',
-      
-      // Other Models
-      'mistral-large': 'mistral-large',
-      'mixtral-8x7b': 'mixtral-8x7b',
-      'codellama-34b': 'codellama-34b'
-    };
-    
-    const mappedModel = directMapping[modelId];
-    if (!mappedModel) {
-      console.warn(`Model ${modelId} not found in mapping, using deepseek-v3 as fallback`);
-      return 'deepseek-v3';
-    }
-    
-    console.log(`Mapped ${modelId} to ${mappedModel}`);
-    return mappedModel;
-  }
-  
   // Test model availability
   async testModel(modelId: string): Promise<boolean> {
     try {
@@ -698,8 +634,7 @@ Please try again in a few moments - I should be back online soon!`,
   
   // Check if specific model is working
   isModelWorking(modelId: string): boolean {
-    const mappedModel = this.mapModelName(modelId);
-    return this.availableModels.has(mappedModel);
+    return this.availableModels.has(modelId);
   }
 }
 

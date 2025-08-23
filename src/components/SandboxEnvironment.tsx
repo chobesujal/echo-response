@@ -34,18 +34,26 @@ import {
   Check,
   X,
   AlertCircle,
-  Zap
+  Zap,
+  ExternalLink,
+  Share,
+  Folder,
+  File,
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
+import ReactMarkdown from "react-markdown";
 
 interface SandboxFile {
   name: string;
   content: string;
   language: string;
   isMain?: boolean;
+  path: string;
 }
 
 interface SandboxProject {
@@ -54,13 +62,17 @@ interface SandboxProject {
   files: SandboxFile[];
   framework: string;
   lastModified: Date;
+  dependencies?: string[];
 }
 
 const SANDBOX_TEMPLATES = {
   'vanilla-js': {
     name: 'Vanilla JavaScript',
     files: [
-      { name: 'index.html', content: `<!DOCTYPE html>
+      { 
+        name: 'index.html', 
+        path: '/index.html',
+        content: `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -76,8 +88,14 @@ const SANDBOX_TEMPLATES = {
     </div>
     <script src="script.js"></script>
 </body>
-</html>`, language: 'html', isMain: true },
-      { name: 'style.css', content: `body {
+</html>`, 
+        language: 'html', 
+        isMain: true 
+      },
+      { 
+        name: 'style.css', 
+        path: '/style.css',
+        content: `body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
     padding: 20px;
@@ -125,8 +143,13 @@ button:hover {
     background: #f8f9fa;
     border-radius: 10px;
     color: #666;
-}`, language: 'css' },
-      { name: 'script.js', content: `document.addEventListener('DOMContentLoaded', function() {
+}`, 
+        language: 'css' 
+      },
+      { 
+        name: 'script.js', 
+        path: '/script.js',
+        content: `document.addEventListener('DOMContentLoaded', function() {
     const button = document.getElementById('btn');
     const output = document.getElementById('output');
     let clickCount = 0;
@@ -145,13 +168,19 @@ button:hover {
     // Add current time
     const now = new Date();
     output.textContent = \`App loaded at \${now.toLocaleTimeString()}\`;
-});`, language: 'javascript' }
-    ]
+});`, 
+        language: 'javascript' 
+      }
+    ],
+    dependencies: []
   },
   'react': {
     name: 'React App',
     files: [
-      { name: 'App.jsx', content: `import React, { useState } from 'react';
+      { 
+        name: 'App.jsx', 
+        path: '/src/App.jsx',
+        content: `import React, { useState } from 'react';
 import './App.css';
 
 function App() {
@@ -178,8 +207,14 @@ function App() {
   );
 }
 
-export default App;`, language: 'jsx', isMain: true },
-      { name: 'App.css', content: `.App {
+export default App;`, 
+        language: 'jsx', 
+        isMain: true 
+      },
+      { 
+        name: 'App.css', 
+        path: '/src/App.css',
+        content: `.App {
   text-align: center;
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -235,13 +270,19 @@ h1 {
 
 .counter-btn:active {
   transform: translateY(0);
-}`, language: 'css' }
-    ]
+}`, 
+        language: 'css' 
+      }
+    ],
+    dependencies: ['react', 'react-dom']
   },
   'vue': {
     name: 'Vue.js App',
     files: [
-      { name: 'App.vue', content: `<template>
+      { 
+        name: 'App.vue', 
+        path: '/src/App.vue',
+        content: `<template>
   <div id="app">
     <div class="container">
       <h1>Vue.js Sandbox</h1>
@@ -354,13 +395,20 @@ h1 {
   color: #42b883;
   font-weight: bold;
 }
-</style>`, language: 'vue', isMain: true }
-    ]
+</style>`, 
+        language: 'vue', 
+        isMain: true 
+      }
+    ],
+    dependencies: ['vue']
   },
   'python': {
     name: 'Python Script',
     files: [
-      { name: 'main.py', content: `#!/usr/bin/env python3
+      { 
+        name: 'main.py', 
+        path: '/main.py',
+        content: `#!/usr/bin/env python3
 """
 Python Sandbox Environment
 A simple demonstration of Python capabilities
@@ -447,25 +495,43 @@ def main():
         print(f"  {operation}")
 
 if __name__ == "__main__":
-    main()`, language: 'python', isMain: true }
-    ]
+    main()`, 
+        language: 'python', 
+        isMain: true 
+      }
+    ],
+    dependencies: []
   }
 };
 
 interface SandboxEnvironmentProps {
   initialCode?: string;
   initialLanguage?: string;
+  isEmbedded?: boolean;
+  onClose?: () => void;
 }
 
-export const SandboxEnvironment = ({ initialCode, initialLanguage }: SandboxEnvironmentProps) => {
+export const SandboxEnvironment = ({ 
+  initialCode, 
+  initialLanguage, 
+  isEmbedded = false,
+  onClose 
+}: SandboxEnvironmentProps) => {
   const [currentProject, setCurrentProject] = useState<SandboxProject>(() => {
     if (initialCode && initialLanguage) {
       return {
         id: 'custom',
-        name: 'Custom Code',
-        files: [{ name: `main.${getFileExtension(initialLanguage)}`, content: initialCode, language: initialLanguage, isMain: true }],
+        name: 'AI Generated Code',
+        files: [{ 
+          name: `main.${getFileExtension(initialLanguage)}`, 
+          path: `/main.${getFileExtension(initialLanguage)}`,
+          content: initialCode, 
+          language: initialLanguage, 
+          isMain: true 
+        }],
         framework: initialLanguage,
-        lastModified: new Date()
+        lastModified: new Date(),
+        dependencies: getDependencies(initialLanguage)
       };
     }
     return {
@@ -473,7 +539,8 @@ export const SandboxEnvironment = ({ initialCode, initialLanguage }: SandboxEnvi
       name: 'Vanilla JavaScript',
       files: SANDBOX_TEMPLATES['vanilla-js'].files,
       framework: 'vanilla-js',
-      lastModified: new Date()
+      lastModified: new Date(),
+      dependencies: SANDBOX_TEMPLATES['vanilla-js'].dependencies
     };
   });
   
@@ -481,16 +548,17 @@ export const SandboxEnvironment = ({ initialCode, initialLanguage }: SandboxEnvi
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState('');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [activeTab, setActiveTab] = useState('code');
+  const [activeTab, setActiveTab] = useState(initialCode ? 'preview' : 'code');
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [fontSize, setFontSize] = useState(14);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['/']));
   const { toast } = useToast();
   const { theme } = useTheme();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const getFileExtension = (language: string): string => {
+  function getFileExtension(language: string): string {
     const extensions: Record<string, string> = {
       javascript: 'js', typescript: 'ts', python: 'py', java: 'java',
       cpp: 'cpp', c: 'c', csharp: 'cs', go: 'go', rust: 'rs',
@@ -501,12 +569,30 @@ export const SandboxEnvironment = ({ initialCode, initialLanguage }: SandboxEnvi
       markdown: 'md', bash: 'sh', powershell: 'ps1'
     };
     return extensions[language] || 'txt';
-  };
+  }
+
+  function getDependencies(language: string): string[] {
+    const deps: Record<string, string[]> = {
+      'react': ['react', 'react-dom'],
+      'vue': ['vue'],
+      'angular': ['@angular/core', '@angular/common'],
+      'svelte': ['svelte'],
+      'typescript': ['typescript'],
+      'python': ['python3'],
+      'node': ['node']
+    };
+    return deps[language] || [];
+  }
 
   const updateFileContent = (content: string) => {
     const updatedFiles = [...currentProject.files];
     updatedFiles[activeFile] = { ...updatedFiles[activeFile], content };
     setCurrentProject({ ...currentProject, files: updatedFiles, lastModified: new Date() });
+    
+    // Auto-run for web technologies
+    if (['html', 'css', 'javascript', 'jsx', 'tsx', 'vue'].includes(updatedFiles[activeFile].language)) {
+      setTimeout(() => runCode(), 500);
+    }
   };
 
   const addNewFile = () => {
@@ -514,8 +600,10 @@ export const SandboxEnvironment = ({ initialCode, initialLanguage }: SandboxEnvi
     if (fileName) {
       const extension = fileName.split('.').pop()?.toLowerCase() || 'txt';
       const language = getLanguageFromExtension(extension);
+      const path = fileName.startsWith('/') ? fileName : `/${fileName}`;
       const newFile: SandboxFile = {
         name: fileName,
+        path: path,
         content: getTemplateContent(language),
         language: language
       };
@@ -571,7 +659,7 @@ export const SandboxEnvironment = ({ initialCode, initialLanguage }: SandboxEnvi
 
   const runCode = async () => {
     setIsRunning(true);
-    setActiveTab('output');
+    setActiveTab('preview');
     setConsoleOutput([]);
     
     try {
@@ -697,11 +785,13 @@ Output generated.`;
         name: template.name,
         files: template.files,
         framework: templateKey,
-        lastModified: new Date()
+        lastModified: new Date(),
+        dependencies: template.dependencies
       });
       setActiveFile(0);
       setOutput('');
       setConsoleOutput([]);
+      setTimeout(() => runCode(), 500);
     }
   };
 
@@ -733,8 +823,86 @@ Output generated.`;
     }
   };
 
+  const toggleFolder = (path: string) => {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(path)) {
+      newExpanded.delete(path);
+    } else {
+      newExpanded.add(path);
+    }
+    setExpandedFolders(newExpanded);
+  };
+
+  const renderFileTree = () => {
+    const folders = new Map<string, SandboxFile[]>();
+    
+    currentProject.files.forEach(file => {
+      const dir = file.path.substring(0, file.path.lastIndexOf('/')) || '/';
+      if (!folders.has(dir)) {
+        folders.set(dir, []);
+      }
+      folders.get(dir)!.push(file);
+    });
+
+    return Array.from(folders.entries()).map(([dir, files]) => (
+      <div key={dir}>
+        {dir !== '/' && (
+          <div 
+            className="flex items-center gap-2 p-2 hover:bg-muted/50 cursor-pointer rounded-md"
+            onClick={() => toggleFolder(dir)}
+          >
+            {expandedFolders.has(dir) ? 
+              <ChevronDown className="w-4 h-4" /> : 
+              <ChevronRight className="w-4 h-4" />
+            }
+            <Folder className="w-4 h-4 text-blue-500" />
+            <span className="text-sm">{dir.split('/').pop()}</span>
+          </div>
+        )}
+        {(dir === '/' || expandedFolders.has(dir)) && files.map((file, index) => {
+          const globalIndex = currentProject.files.indexOf(file);
+          return (
+            <div
+              key={globalIndex}
+              className={`flex items-center justify-between p-2 ml-4 rounded-md cursor-pointer hover:bg-muted/50 ${
+                activeFile === globalIndex ? 'bg-muted/70' : ''
+              }`}
+              onClick={() => setActiveFile(globalIndex)}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm truncate">{file.name}</span>
+                {file.isMain && <Badge variant="secondary" className="text-xs">main</Badge>}
+              </div>
+              {currentProject.files.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteFile(globalIndex);
+                  }}
+                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    ));
+  };
+
+  // Auto-run on mount for initial code
+  useEffect(() => {
+    if (initialCode && ['html', 'css', 'javascript', 'jsx', 'tsx', 'vue'].includes(initialLanguage || '')) {
+      setTimeout(() => runCode(), 1000);
+    }
+  }, []);
+
   return (
-    <Card className={`w-full shadow-2xl border border-border/30 ${isFullscreen ? 'fixed inset-4 z-50' : ''} bg-card overflow-hidden`}>
+    <Card className={`w-full shadow-2xl border border-border/30 ${isFullscreen ? 'fixed inset-4 z-50' : ''} bg-card overflow-hidden ${isEmbedded ? 'h-[600px]' : 'h-[700px]'}`}>
       {/* Professional Header */}
       <div className="flex items-center justify-between p-4 border-b border-border/20 bg-gradient-to-r from-muted/20 via-muted/10 to-transparent">
         <div className="flex items-center gap-4">
@@ -772,62 +940,53 @@ Output generated.`;
             {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             {isRunning ? 'Running...' : 'Run'}
           </Button>
-          <Button variant="outline" size="sm" onClick={exportProject} className="gap-2">
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={exportProject}
             className="gap-2"
           >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            <Download className="w-4 h-4" />
+            Export
           </Button>
+          {isEmbedded && onClose && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="gap-2"
+            >
+              <X className="w-4 h-4" />
+              Close
+            </Button>
+          )}
+          {!isEmbedded && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="gap-2"
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="flex h-[600px]">
+      <div className="flex h-[calc(100%-80px)]">
         {/* File Explorer */}
         <div className="w-64 border-r border-border/20 bg-muted/10">
           <div className="p-3 border-b border-border/20">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium">Files</h4>
+              <h4 className="text-sm font-medium">Explorer</h4>
               <Button variant="ghost" size="sm" onClick={addNewFile} className="h-6 w-6 p-0">
                 <Plus className="w-3 h-3" />
               </Button>
             </div>
           </div>
-          <ScrollArea className="h-[calc(600px-60px)]">
+          <ScrollArea className="h-[calc(100%-60px)]">
             <div className="p-2">
-              {currentProject.files.map((file, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-muted/50 ${
-                    activeFile === index ? 'bg-muted/70' : ''
-                  }`}
-                  onClick={() => setActiveFile(index)}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm truncate">{file.name}</span>
-                    {file.isMain && <Badge variant="secondary" className="text-xs">main</Badge>}
-                  </div>
-                  {currentProject.files.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteFile(index);
-                      }}
-                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+              {renderFileTree()}
             </div>
           </ScrollArea>
         </div>
@@ -845,7 +1004,7 @@ Output generated.`;
                   <Eye className="w-4 h-4" />
                   Preview
                 </TabsTrigger>
-                <TabsTrigger value="output" className="gap-2 text-xs">
+                <TabsTrigger value="console" className="gap-2 text-xs">
                   <Terminal className="w-4 h-4" />
                   Console
                 </TabsTrigger>
@@ -931,6 +1090,14 @@ Output generated.`;
                       <div className="w-3 h-3 rounded-full bg-green-500"></div>
                     </div>
                     <div className="text-sm text-gray-600 font-mono">localhost:3000</div>
+                    <div className="ml-auto flex gap-2">
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={runCode}>
+                        <RefreshCw className="w-3 h-3" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <ExternalLink className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                   <iframe
                     ref={iframeRef}
@@ -942,7 +1109,7 @@ Output generated.`;
               </div>
             </TabsContent>
 
-            <TabsContent value="output" className="flex-1 mt-0">
+            <TabsContent value="console" className="flex-1 mt-0">
               <div className="h-full bg-gray-900 text-green-400 font-mono text-sm">
                 {isRunning ? (
                   <div className="p-6 flex items-center gap-4">

@@ -157,9 +157,7 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupContent>
             <div className="flex items-center gap-2 px-2 py-3 border-b border-sidebar-border">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                <div className="w-3 h-3 bg-white rounded-sm"></div>
-              </div>
+              <img src="/logo.svg" alt="Cosmic AI" className="w-6 h-6" />
               {!collapsed && <h2 className="text-lg font-semibold text-sidebar-foreground">Cosmic AI</h2>}
             </div>
           </SidebarGroupContent>
