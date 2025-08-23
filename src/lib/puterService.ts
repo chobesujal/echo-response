@@ -202,7 +202,7 @@ export class PuterService {
       max_tokens: 2000,
       temperature: 0.7,
       memory: true,
-      stream: false,
+      stream: true,
       ...options
     };
     
