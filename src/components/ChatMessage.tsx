@@ -93,9 +93,9 @@ export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: 
                                 <Code2 className="w-4 h-4 text-muted-foreground" />
                                 <span className="text-xs font-medium text-muted-foreground uppercase">{language}</span>
                                 {isWebCode && (
-                                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                                  <span className="text-xs bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded">
                                     Preview Available
-                                  </Badge>
+                                  </span>
                                 )}
                               </div>
                               <div className="flex gap-1">

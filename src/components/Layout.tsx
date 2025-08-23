@@ -21,7 +21,16 @@ export function Layout() {
   }, []);
 
   const handleNewChat = () => {
-    setCurrentChatId(Date.now().toString());
+    const newChatId = `chat-${Date.now()}`;
+    setCurrentChatId(newChatId);
+    
+    // Clear any existing memory for the new chat
+    try {
+      const puterService = require('@/lib/puterService').puterService;
+      puterService.clearMemory(newChatId);
+    } catch (error) {
+      console.warn('Failed to clear memory for new chat:', error);
+    }
   };
 
   const handleLoadChat = (chatId: string) => {

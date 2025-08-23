@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Trash2, RefreshCw, Copy, Download, Share, Code, Brain, Search, Zap, Menu, X, ChevronDown, Sparkles } from "lucide-react";
+import { Trash2, RefreshCw, Copy, Download, Share, Code, Brain, Search, Zap, Menu, X, ChevronDown, Sparkles, MessageSquare, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { puterService } from "@/lib/puterService";
 import { Separator } from "@/components/ui/separator";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface Message {
   id: string;
@@ -38,6 +39,8 @@ type Model =
   | 'gpt-4o' 
   | 'gpt-4o-mini' 
   | 'gpt-3.5-turbo'
+  | 'o1-preview'
+  | 'o1-mini'
   | 'claude-3-5-sonnet-20241022'
   | 'claude-3-5-haiku-20241022'
   | 'claude-3-opus-20240229'
@@ -57,6 +60,8 @@ const modelDisplayNames: Record<Model, string> = {
   'gpt-4o': 'GPT-4o',
   'gpt-4o-mini': 'GPT-4o Mini',
   'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+  'o1-preview': 'o1-preview',
+  'o1-mini': 'o1-mini',
   'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
   'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
   'claude-3-opus-20240229': 'Claude 3 Opus',
@@ -73,7 +78,7 @@ const modelDisplayNames: Record<Model, string> = {
 
 const modelCategories = {
   'DeepSeek': ['deepseek-v3', 'deepseek-r1'],
-  'OpenAI': ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
+  'OpenAI': ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o1-preview', 'o1-mini'],
   'Anthropic': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
   'Google': ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'],
   'Meta': ['llama-3.1-405b', 'llama-3.1-70b', 'llama-3.1-8b'],
@@ -99,11 +104,11 @@ export const EnhancedChatContainer = ({
   const [isTyping, setIsTyping] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [sessionId] = useState(() => `session-${Date.now()}`);
+  const [sessionId] = useState(() => currentChatId || `session-${Date.now()}`);
   const [streamingText, setStreamingText] = useState("");
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [modelStatus, setModelStatus] = useState<Record<string, 'working' | 'testing' | 'error'>>({});
-  const [sandboxOpen, setSandboxOpen] = useState(false);
+  const [showSandbox, setShowSandbox] = useState(false);
   const [sandboxCode, setSandboxCode] = useState('');
   const [sandboxLanguage, setSandboxLanguage] = useState('javascript');
   const [showSuggestions, setShowSuggestions] = useState(true);
@@ -187,6 +192,7 @@ export const EnhancedChatContainer = ({
             timestamp: new Date(msg.timestamp)
           }));
           setMessages(messagesWithDates);
+          setShowSuggestions(messagesWithDates.length <= 1);
         }
       }
     } catch (error) {
@@ -323,11 +329,14 @@ export const EnhancedChatContainer = ({
       }
     }
 
-    // Add mode context
+    // Add mode context with model-specific prompts
+    let systemPrompt = '';
     if (mode === 'thinking') {
-      messageText = `[Thinking Mode] Please think step by step and show your reasoning process.\n\n${messageText}`;
+      systemPrompt = `You are ${modelDisplayNames[selectedModel]}. Think step by step and show your reasoning process clearly. Explain your thought process and analysis. `;
     } else if (mode === 'search') {
-      messageText = `[Search Mode] Please provide comprehensive, well-researched information.\n\n${messageText}`;
+      systemPrompt = `You are ${modelDisplayNames[selectedModel]}. Search for relevant information and provide comprehensive, well-researched answers. `;
+    } else {
+      systemPrompt = `You are ${modelDisplayNames[selectedModel]}. Respond as yourself with your unique capabilities and personality. `;
     }
 
     // Detect code in user message
@@ -361,13 +370,6 @@ export const EnhancedChatContainer = ({
       // Check Puter availability
       if (!await puterService.isAvailable()) {
         throw new Error('Puter SDK not available. Please ensure the Puter SDK is loaded.');
-      }
-
-      let systemPrompt = '';
-      if (mode === 'thinking') {
-        systemPrompt = 'Think step by step and explain your reasoning process clearly. Show your thought process and analysis. ';
-      } else if (mode === 'search') {
-        systemPrompt = 'Search for relevant information and provide comprehensive, well-researched answers. ';
       }
 
       let responseText: string;
@@ -424,7 +426,7 @@ export const EnhancedChatContainer = ({
         if (webLanguages.includes(aiCodeDetection.language)) {
           setSandboxCode(aiCodeDetection.code);
           setSandboxLanguage(aiCodeDetection.language);
-          setSandboxOpen(true);
+          setShowSandbox(true);
         }
       }
       
@@ -491,6 +493,7 @@ export const EnhancedChatContainer = ({
     setIsStreaming(false);
     setStreamingMessageId(null);
     setShowSuggestions(true);
+    setShowSandbox(false);
     
     // Clear memory for current session and model
     puterService.clearMemory(sessionId, selectedModel);
@@ -569,7 +572,7 @@ export const EnhancedChatContainer = ({
   const openInSandbox = (code: string, language: string) => {
     setSandboxCode(code);
     setSandboxLanguage(language);
-    setSandboxOpen(true);
+    setShowSandbox(true);
   };
 
   const getModelStatusBadge = (model: string) => {
@@ -586,7 +589,7 @@ export const EnhancedChatContainer = ({
 
   const suggestionPrompts = [
     "Write a React component for a todo list",
-    "Create a Python script for data analysis",
+    "Create a Python script for data analysis", 
     "Build a responsive landing page with HTML/CSS",
     "Explain how machine learning works",
     "Help me debug this JavaScript code",
@@ -597,13 +600,33 @@ export const EnhancedChatContainer = ({
     handleSendMessage(suggestion, [], 'normal');
   };
 
+  const handleNewConversation = () => {
+    clearChat();
+    // Generate new session ID
+    const newSessionId = `session-${Date.now()}`;
+    // Clear memory for new session
+    puterService.clearMemory(newSessionId);
+    
+    toast({
+      title: "New Conversation",
+      description: "Started a fresh conversation with clean memory."
+    });
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header redesigned based on reference image */}
+      {/* Header redesigned to match reference image */}
       <div className="flex items-center justify-between p-4 bg-background border-b border-border/20">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" className="lg:hidden">
-            <Menu className="w-4 h-4" />
+          {/* New Conversation Button */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleNewConversation}
+            className="gap-2 bg-background hover:bg-muted/50 border border-border/30 rounded-lg px-3 py-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New</span>
           </Button>
           
           {/* Reasoning model section */}
@@ -663,97 +686,100 @@ export const EnhancedChatContainer = ({
         </div>
       </div>
       
-      {/* Chat Area */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4 md:px-6">
-        <div className="space-y-6 max-w-4xl mx-auto py-6">
-          {messages.map(message => (
-            <div key={message.id}>
-              <ChatMessage 
-                message={message.text} 
-                isUser={message.isUser} 
-                timestamp={message.timestamp} 
-                model={message.model} 
-              />
-              {message.hasCode && message.codeContent && (
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openInSandbox(message.codeContent!, message.codeLanguage!)}
-                    className="gap-2"
-                  >
-                    <Code className="w-4 h-4" />
-                    Open in Sandbox
-                  </Button>
+      {/* Main Content Area with Resizable Panels */}
+      <div className="flex-1 overflow-hidden">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* Chat Panel */}
+          <ResizablePanel defaultSize={showSandbox ? 50 : 100} minSize={30}>
+            <div className="flex flex-col h-full">
+              {/* Chat Area */}
+              <ScrollArea ref={scrollAreaRef} className="flex-1 px-4 md:px-6">
+                <div className="space-y-6 max-w-4xl mx-auto py-6">
+                  {messages.map(message => (
+                    <div key={message.id}>
+                      <ChatMessage 
+                        message={message.text} 
+                        isUser={message.isUser} 
+                        timestamp={message.timestamp} 
+                        model={message.model} 
+                      />
+                      {message.hasCode && message.codeContent && (
+                        <div className="mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openInSandbox(message.codeContent!, message.codeLanguage!)}
+                            className="gap-2"
+                          >
+                            <Code className="w-4 h-4" />
+                            Open in Sandbox
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {isStreaming && streamingText && (
+                    <div className="animate-fade-in">
+                      <ChatMessage 
+                        message={streamingText} 
+                        isUser={false} 
+                        timestamp={new Date()} 
+                        model={selectedModel} 
+                        isStreaming={true} 
+                      />
+                    </div>
+                  )}
+                  {isTyping && !isStreaming && <TypingIndicator />}
+                  
+                  {/* Suggestion prompts for new chats */}
+                  {showSuggestions && messages.length === 1 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
+                      {suggestionPrompts.map((prompt, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          className="p-4 h-auto text-left justify-start hover:bg-muted/50 border-border/30"
+                          onClick={() => handleSuggestionClick(prompt)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <Sparkles className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
+                            <span className="text-sm">{prompt}</span>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
-          {isStreaming && streamingText && (
-            <div className="animate-fade-in">
-              <ChatMessage 
-                message={streamingText} 
-                isUser={false} 
-                timestamp={new Date()} 
-                model={selectedModel} 
-                isStreaming={true} 
-              />
-            </div>
-          )}
-          {isTyping && !isStreaming && <TypingIndicator />}
-          
-          {/* Suggestion prompts for new chats */}
-          {showSuggestions && messages.length === 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
-              {suggestionPrompts.map((prompt, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="p-4 h-auto text-left justify-start hover:bg-muted/50 border-border/30"
-                  onClick={() => handleSuggestionClick(prompt)}
-                >
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
-                    <span className="text-sm">{prompt}</span>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+              </ScrollArea>
 
-      {/* Input Area */}
-      <div className="p-4 md:p-6 bg-background border-t border-border/20">
-        <div className="max-w-4xl mx-auto">
-          <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
-        </div>
+              {/* Input Area */}
+              <div className="p-4 md:p-6 bg-background border-t border-border/20">
+                <div className="max-w-4xl mx-auto">
+                  <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
+                </div>
+              </div>
+            </div>
+          </ResizablePanel>
+
+          {/* Sandbox Panel */}
+          {showSandbox && (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={50} minSize={30}>
+                <div className="h-full border-l border-border/20">
+                  <SandboxEnvironment 
+                    initialCode={sandboxCode} 
+                    initialLanguage={sandboxLanguage}
+                    isEmbedded={true}
+                    onClose={() => setShowSandbox(false)}
+                    className="h-full border-0 rounded-none"
+                  />
+                </div>
+              </ResizablePanel>
+            </>
+          )}
+        </ResizablePanelGroup>
       </div>
-
-      {/* Sandbox Dialog */}
-      <Dialog open={sandboxOpen} onOpenChange={setSandboxOpen}>
-        <DialogContent className="max-w-7xl h-[90vh] p-0">
-          <DialogHeader className="p-4 border-b">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2">
-                <Code className="w-5 h-5" />
-                Code Sandbox Environment
-              </DialogTitle>
-              <Button variant="ghost" size="sm" onClick={() => setSandboxOpen(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            <SandboxEnvironment 
-              initialCode={sandboxCode} 
-              initialLanguage={sandboxLanguage}
-              isEmbedded={true}
-              onClose={() => setSandboxOpen(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

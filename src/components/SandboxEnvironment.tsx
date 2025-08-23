@@ -23,9 +23,14 @@ import {
   Globe,
   FileText,
   Layers,
-  Eye,
-  EyeOff,
-  Maximize2,
+  Box,
+  Palette,
+  Database,
+  Server,
+  Cpu,
+  Braces,
+  FileCode,
+  Image as ImageIcon,
   Minimize2,
   Save,
   FolderOpen,
@@ -40,13 +45,13 @@ import {
   Folder,
   File,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Maximize2
 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
-import ReactMarkdown from "react-markdown";
 
 interface SandboxFile {
   name: string;
@@ -78,98 +83,91 @@ const SANDBOX_TEMPLATES = {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vanilla JS App</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .output {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            color: #666;
+        }
+    </style>
 </head>
 <body>
-    <div id="app">
+    <div class="container">
         <h1>Hello World!</h1>
-        <button id="btn">Click me</button>
-        <p id="output">Output will appear here</p>
+        <button onclick="handleClick()">Click me</button>
+        <div class="output" id="output">Ready to interact!</div>
     </div>
-    <script src="script.js"></script>
+    
+    <script>
+        let clickCount = 0;
+        
+        function handleClick() {
+            clickCount++;
+            const output = document.getElementById('output');
+            output.textContent = \`Button clicked \${clickCount} time\${clickCount === 1 ? '' : 's'}!\`;
+            
+            // Add animation
+            output.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                output.style.transform = 'scale(1)';
+            }, 200);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            document.getElementById('output').textContent = \`App loaded at \${now.toLocaleTimeString()}\`;
+        });
+    </script>
 </body>
 </html>`, 
         language: 'html', 
         isMain: true 
-      },
-      { 
-        name: 'style.css', 
-        path: '/style.css',
-        content: `body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#app {
-    background: white;
-    padding: 40px;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.1);
-    text-align: center;
-    max-width: 400px;
-    width: 100%;
-}
-
-h1 {
-    color: #333;
-    margin-bottom: 30px;
-    font-size: 2.5em;
-}
-
-button {
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    color: white;
-    border: none;
-    padding: 15px 30px;
-    border-radius: 50px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-button:hover {
-    transform: translateY(-2px);
-}
-
-#output {
-    margin-top: 20px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    color: #666;
-}`, 
-        language: 'css' 
-      },
-      { 
-        name: 'script.js', 
-        path: '/script.js',
-        content: `document.addEventListener('DOMContentLoaded', function() {
-    const button = document.getElementById('btn');
-    const output = document.getElementById('output');
-    let clickCount = 0;
-
-    button.addEventListener('click', function() {
-        clickCount++;
-        output.textContent = \`Button clicked \${clickCount} time\${clickCount === 1 ? '' : 's'}!\`;
-        
-        // Add some animation
-        output.style.transform = 'scale(1.1)';
-        setTimeout(() => {
-            output.style.transform = 'scale(1)';
-        }, 200);
-    });
-
-    // Add current time
-    const now = new Date();
-    output.textContent = \`App loaded at \${now.toLocaleTimeString()}\`;
-});`, 
-        language: 'javascript' 
       }
     ],
     dependencies: []
@@ -181,7 +179,6 @@ button:hover {
         name: 'App.jsx', 
         path: '/src/App.jsx',
         content: `import React, { useState } from 'react';
-import './App.css';
 
 function App() {
   const [count, setCount] = useState(0);
@@ -193,16 +190,48 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>React Sandbox</h1>
-        <div className="counter-container">
-          <p className="message">{message}</p>
-          <button className="counter-btn" onClick={handleClick}>
+    <div style={{
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      margin: 0,
+      padding: '20px',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <div style={{
+        background: 'white',
+        padding: '40px',
+        borderRadius: '20px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+        textAlign: 'center',
+        maxWidth: '500px',
+        width: '100%'
+      }}>
+        <h1 style={{ color: '#333', marginBottom: '30px', fontSize: '2.5em' }}>
+          React Sandbox
+        </h1>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
+          <p style={{ fontSize: '1.2em', color: '#666', margin: 0 }}>{message}</p>
+          <button 
+            onClick={handleClick}
+            style={{
+              background: 'linear-gradient(45deg, #667eea, #764ba2)',
+              color: 'white',
+              border: 'none',
+              padding: '15px 30px',
+              borderRadius: '50px',
+              fontSize: '18px',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+            }}
+          >
             Count: {count}
           </button>
         </div>
-      </header>
+      </div>
     </div>
   );
 }
@@ -210,68 +239,6 @@ function App() {
 export default App;`, 
         language: 'jsx', 
         isMain: true 
-      },
-      { 
-        name: 'App.css', 
-        path: '/src/App.css',
-        content: `.App {
-  text-align: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.App-header {
-  background: white;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.1);
-  max-width: 500px;
-  width: 100%;
-}
-
-h1 {
-  color: #333;
-  margin-bottom: 30px;
-  font-size: 2.5em;
-}
-
-.counter-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  align-items: center;
-}
-
-.message {
-  font-size: 1.2em;
-  color: #666;
-  margin: 0;
-}
-
-.counter-btn {
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  padding: 15px 30px;
-  border-radius: 50px;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-}
-
-.counter-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.counter-btn:active {
-  transform: translateY(0);
-}`, 
-        language: 'css' 
       }
     ],
     dependencies: ['react', 'react-dom']
@@ -509,13 +476,15 @@ interface SandboxEnvironmentProps {
   initialLanguage?: string;
   isEmbedded?: boolean;
   onClose?: () => void;
+  className?: string;
 }
 
 export const SandboxEnvironment = ({ 
   initialCode, 
   initialLanguage, 
   isEmbedded = false,
-  onClose 
+  onClose,
+  className 
 }: SandboxEnvironmentProps) => {
   const [currentProject, setCurrentProject] = useState<SandboxProject>(() => {
     if (initialCode && initialLanguage) {
@@ -667,24 +636,15 @@ export const SandboxEnvironment = ({
       
       if (mainFile.language === 'html' || currentProject.framework === 'vanilla-js') {
         // For HTML/JS projects, create a complete HTML document
-        let htmlContent = '';
-        const htmlFile = currentProject.files.find(f => f.language === 'html');
-        const cssFile = currentProject.files.find(f => f.language === 'css');
-        const jsFile = currentProject.files.find(f => f.language === 'javascript');
+        let htmlContent = mainFile.content;
         
-        if (htmlFile) {
-          htmlContent = htmlFile.content;
-          // Inject CSS and JS
-          if (cssFile) {
-            htmlContent = htmlContent.replace('</head>', `<style>${cssFile.content}</style></head>`);
-          }
-          if (jsFile) {
-            htmlContent = htmlContent.replace('</body>', `<script>${jsFile.content}</script></body>`);
-          }
-        } else {
-          // Create HTML wrapper
+        // If it's not a complete HTML document, wrap it
+        if (!htmlContent.includes('<!DOCTYPE html>') && !htmlContent.includes('<html')) {
+          const cssFile = currentProject.files.find(f => f.language === 'css');
+          const jsFile = currentProject.files.find(f => f.language === 'javascript');
+          
           htmlContent = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -692,21 +652,58 @@ export const SandboxEnvironment = ({
     ${cssFile ? `<style>${cssFile.content}</style>` : ''}
 </head>
 <body>
-    <div id="app">
-        <h1>Sandbox Environment</h1>
-        <p>Code is running...</p>
-    </div>
+    ${htmlContent}
     ${jsFile ? `<script>${jsFile.content}</script>` : ''}
 </body>
 </html>`;
         }
         
-        // Update iframe
+        // Update iframe with proper error handling
         if (iframeRef.current) {
-          iframeRef.current.srcdoc = htmlContent;
+          try {
+            iframeRef.current.srcdoc = htmlContent;
+            console.log('HTML content loaded in iframe');
+          } catch (error) {
+            console.error('Error loading HTML in iframe:', error);
+            setOutput(`Preview Error: ${error}\n\nFailed to load HTML content in preview.`);
+          }
         }
         
         setOutput('Web application loaded successfully in preview');
+      } else if (mainFile.language === 'jsx' || mainFile.language === 'tsx') {
+        // For React components, create a wrapper
+        const reactWrapper = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Preview</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        ${mainFile.content}
+        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
+</body>
+</html>`;
+        
+        if (iframeRef.current) {
+          try {
+            iframeRef.current.srcdoc = reactWrapper;
+            console.log('React content loaded in iframe');
+          } catch (error) {
+            console.error('Error loading React in iframe:', error);
+            setOutput(`Preview Error: ${error}\n\nFailed to load React content in preview.`);
+          }
+        }
+        
+        setOutput('React application loaded successfully in preview');
       } else {
         // For other languages, simulate execution
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
@@ -716,6 +713,7 @@ export const SandboxEnvironment = ({
       }
       
     } catch (error) {
+      console.error('Sandbox execution error:', error);
       setOutput(`Execution Error: ${error}\n\nPlease check your code and try again.`);
     } finally {
       setIsRunning(false);
@@ -817,9 +815,9 @@ Output generated.`;
 
   const getPreviewDimensions = () => {
     switch (previewMode) {
-      case 'mobile': return 'w-80 h-[600px]';
-      case 'tablet': return 'w-[768px] h-[600px]';
-      default: return 'w-full h-[600px]';
+      case 'mobile': return 'w-80 h-[500px]';
+      case 'tablet': return 'w-[768px] h-[500px]';
+      default: return 'w-full h-[500px]';
     }
   };
 
@@ -864,7 +862,7 @@ Output generated.`;
           return (
             <div
               key={globalIndex}
-              className={`flex items-center justify-between p-2 ml-4 rounded-md cursor-pointer hover:bg-muted/50 ${
+              className={`flex items-center justify-between p-2 ml-4 rounded-md cursor-pointer hover:bg-muted/50 group ${
                 activeFile === globalIndex ? 'bg-muted/70' : ''
               }`}
               onClick={() => setActiveFile(globalIndex)}
@@ -902,7 +900,7 @@ Output generated.`;
   }, []);
 
   return (
-    <Card className={`w-full shadow-2xl border border-border/30 ${isFullscreen ? 'fixed inset-4 z-50' : ''} bg-card overflow-hidden ${isEmbedded ? 'h-[600px]' : 'h-[700px]'}`}>
+    <Card className={`w-full shadow-2xl border border-border/30 ${isFullscreen ? 'fixed inset-4 z-50' : ''} bg-card overflow-hidden ${isEmbedded ? 'h-[600px]' : 'h-[700px]'} ${className || ''}`}>
       {/* Professional Header */}
       <div className="flex items-center justify-between p-4 border-b border-border/20 bg-gradient-to-r from-muted/20 via-muted/10 to-transparent">
         <div className="flex items-center gap-4">
@@ -1072,7 +1070,7 @@ Output generated.`;
                   <Textarea
                     value={currentProject.files[activeFile]?.content || ''}
                     onChange={(e) => updateFileContent(e.target.value)}
-                    className="h-full resize-none border-0 rounded-none font-mono text-sm leading-relaxed"
+                    className="h-full resize-none border-0 rounded-none font-mono text-sm leading-relaxed bg-background"
                     style={{ fontSize: `${fontSize}px` }}
                     placeholder="Start coding..."
                   />
@@ -1101,9 +1099,10 @@ Output generated.`;
                   </div>
                   <iframe
                     ref={iframeRef}
-                    className="w-full h-full border-0"
+                    className="w-full h-full border-0 bg-white"
                     title="Code Preview"
-                    sandbox="allow-scripts allow-same-origin"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    style={{ backgroundColor: 'white' }}
                   />
                 </div>
               </div>

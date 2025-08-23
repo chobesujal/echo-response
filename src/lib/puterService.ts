@@ -51,13 +51,24 @@ export class PuterService {
   }
   
   async testAvailableModels(): Promise<void> {
+    // Updated model list based on Puter documentation
     const testModels = [
-      // Current working models with exact Puter names
-      'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo',
-      'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229',
-      'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp',
+      // DeepSeek Models (Working)
       'deepseek-v3', 'deepseek-r1',
+      
+      // OpenAI Models (Current)
+      'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o1-preview', 'o1-mini',
+      
+      // Anthropic Models (Current)
+      'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229',
+      
+      // Google Models (Current)
+      'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp',
+      
+      // Meta Models
       'llama-3.1-70b', 'llama-3.1-8b', 'llama-3.1-405b',
+      
+      // Other Models
       'mistral-large', 'mixtral-8x7b', 'codellama-34b'
     ];
     
@@ -202,73 +213,54 @@ export class PuterService {
         sessionId: sessionId 
       });
       
-      // Add chat memory if enabled and sessionId provided
-      let contextMessages: Array<{ role: string; content: string }> = [];
+      // Build conversation with memory context
+      let conversationMessages: Array<{ role: string; content: string }> = [];
+      
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const memory = this.getMemory(sessionId, defaultOptions.model);
-        contextMessages = [...memory.slice(-10)]; // Use last 10 messages for context
-        console.log(`Using ${contextMessages.length} messages from memory for context`);
+        conversationMessages = [...memory.slice(-10)]; // Use last 10 messages for context
+        console.log(`Using ${conversationMessages.length} messages from memory for context`);
       }
+      
+      // Add current message
+      conversationMessages.push({ role: 'user', content: message });
       
       const puterModel = defaultOptions.model!;
       console.log('Using exact Puter model:', puterModel);
       
       let response;
-      let lastError;
       
-      // Method 1: Full featured call with context
+      // Method 1: Full conversation with context
       try {
-        const requestPayload = {
+        response = await (window as any).puter.ai.chat(conversationMessages, {
           model: puterModel,
           max_tokens: defaultOptions.max_tokens,
           temperature: defaultOptions.temperature
-        };
-        
-        if (contextMessages.length > 0) {
-          // Build conversation with context
-          const conversationMessages = [
-            ...contextMessages,
-            { role: 'user', content: message }
-          ];
-          response = await (window as any).puter.ai.chat(conversationMessages, requestPayload);
-        } else {
-          response = await (window as any).puter.ai.chat(message, requestPayload);
-        }
-        console.log('Method 1 successful with context');
+        });
+        console.log('Conversation method successful');
       } catch (error1) {
-        lastError = error1;
-        console.warn('Method 1 failed:', error1.message);
+        console.warn('Conversation method failed:', error1.message);
         
-        // Method 2: Simple call with model only
+        // Method 2: Simple message with model
         try {
           response = await (window as any).puter.ai.chat(message, {
             model: puterModel,
-            max_tokens: defaultOptions.max_tokens
+            max_tokens: defaultOptions.max_tokens,
+            temperature: defaultOptions.temperature
           });
-          console.log('Method 2 successful');
+          console.log('Simple method successful');
         } catch (error2) {
-          lastError = error2;
-          console.warn('Method 2 failed:', error2.message);
+          console.warn('Simple method failed:', error2.message);
           
-          // Method 3: Basic call with just model
+          // Method 3: Basic call
           try {
             response = await (window as any).puter.ai.chat(message, {
               model: puterModel
             });
-            console.log('Method 3 successful');
+            console.log('Basic method successful');
           } catch (error3) {
-            lastError = error3;
-            console.warn('Method 3 failed:', error3.message);
-            
-            // Method 4: Fallback to default
-            try {
-              response = await (window as any).puter.ai.chat(message);
-              console.log('Method 4 (fallback) successful');
-            } catch (error4) {
-              lastError = error4;
-              console.error('All methods failed');
-              throw new Error(`All API methods failed. Last error: ${error4.message}`);
-            }
+            console.error('All methods failed');
+            throw new Error(`All API methods failed. Last error: ${error3.message}`);
           }
         }
       }
@@ -280,7 +272,7 @@ export class PuterService {
         throw new Error('Empty or invalid response received');
       }
       
-      // Add to memory if enabled - FIXED: Always add both user and assistant messages
+      // Add to memory if enabled
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         this.addToMemory(sessionId, 'user', message, defaultOptions.model);
         this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
@@ -305,35 +297,40 @@ export class PuterService {
       console.log('Processing image with Puter AI:', imageUrl);
       let response;
       
-      // Method 1: Direct image-to-text API
+      // Method 1: Vision model with image URL
       try {
-        if ((window as any).puter.ai.img2txt) {
-          response = await (window as any).puter.ai.img2txt(imageUrl, prompt || 'Describe this image in detail');
-          console.log('Direct img2txt method successful');
-        } else {
-          throw new Error('img2txt method not available');
-        }
+        response = await (window as any).puter.ai.chat([
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: prompt || 'Please analyze this image and describe what you see in detail.'
+              },
+              {
+                type: 'image_url',
+                image_url: { url: imageUrl }
+              }
+            ]
+          }
+        ], {
+          model: 'gpt-4o',
+          max_tokens: 1000
+        });
+        console.log('Vision model method successful');
       } catch (error1) {
-        console.warn('Direct img2txt failed:', error1.message);
+        console.warn('Vision model failed:', error1.message);
         
-        // Method 2: Vision model with image URL
+        // Method 2: Direct image-to-text API if available
         try {
-          response = await (window as any).puter.ai.chat([
-            {
-              type: 'text',
-              text: prompt || 'Please analyze this image and describe what you see in detail.'
-            },
-            {
-              type: 'image_url',
-              image_url: { url: imageUrl }
-            }
-          ], {
-            model: 'gpt-4o',
-            max_tokens: 1000
-          });
-          console.log('Vision model method successful');
+          if ((window as any).puter.ai.img2txt) {
+            response = await (window as any).puter.ai.img2txt(imageUrl, prompt || 'Describe this image in detail');
+            console.log('Direct img2txt method successful');
+          } else {
+            throw new Error('img2txt method not available');
+          }
         } catch (error2) {
-          console.warn('Vision model failed:', error2.message);
+          console.warn('Direct img2txt failed:', error2.message);
           
           // Method 3: Fallback with text description
           response = await (window as any).puter.ai.chat(
@@ -385,7 +382,7 @@ Please try again or contact support if the issue persists.`;
     };
     
     try {
-      // Add memory context if enabled - FIXED: Proper context building
+      // Add memory context if enabled
       let contextMessages: Array<{ role: string; content: any }> = [];
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const memory = this.getMemory(sessionId, defaultOptions.model);
@@ -420,7 +417,7 @@ Please try again or contact support if the issue persists.`;
       console.log('Puter AI file response received');
       const responseText = this.extractResponseText(response);
       
-      // Add to memory if enabled - FIXED: Proper memory addition
+      // Add to memory if enabled
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const userContent = content.map(c => c.text || '[File content]').join('\n');
         this.addToMemory(sessionId, 'user', userContent, defaultOptions.model);
@@ -550,7 +547,7 @@ Please try again in a few moments - I should be back online soon!`,
   
   getAvailableModels(): string[] {
     return [
-      // DeepSeek Models (Priority)
+      // DeepSeek Models (Priority - Working)
       'deepseek-v3',
       'deepseek-r1',
       
@@ -558,6 +555,8 @@ Please try again in a few moments - I should be back online soon!`,
       'gpt-4o',
       'gpt-4o-mini',
       'gpt-3.5-turbo',
+      'o1-preview',
+      'o1-mini',
       
       // Anthropic Models (Current)
       'claude-3-5-sonnet-20241022',
@@ -591,6 +590,8 @@ Please try again in a few moments - I should be back online soon!`,
       'gpt-4o': 'GPT-4o',
       'gpt-4o-mini': 'GPT-4o Mini',
       'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+      'o1-preview': 'o1-preview',
+      'o1-mini': 'o1-mini',
       
       // Anthropic Models (Current)
       'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',

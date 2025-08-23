@@ -170,7 +170,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={onNewChat}
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700 gap-2"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   {!collapsed && <span>New Conversation</span>}
