@@ -91,7 +91,6 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     const validFiles = files.filter(file => {
-      // Allow images, text files, PDFs, docs, code files
       const validTypes = [
         'image/', 'text/', 'application/pdf', 'application/msword', 
         'application/vnd.openxmlformats-officedocument',
@@ -231,7 +230,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
             value={message}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder={isListening ? "Listening... Speak now" : "Message Cosmic AI..."}
+            placeholder={isListening ? "Listening... Speak now" : "Send a message..."}
             className="min-h-[44px] max-h-[120px] resize-none pr-24 sm:pr-32 bg-transparent border-0 rounded-2xl text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none transition-all duration-200 text-sm sm:text-base"
             disabled={disabled || isListening}
             rows={1}
@@ -311,7 +310,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
         <div className="absolute -top-16 sm:-top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-medium shadow-lg animate-fade-in">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            🎤 Listening... Speak now or click to stop
+            Listening... Speak now or click to stop
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-// Enhanced Puter AI service with image-to-text, memory, and comprehensive model support
+// Enhanced Puter AI service with proper model management and image-to-text
 export interface PuterAIOptions {
   model?: string;
   context?: Array<{ role: string; content: string }>;
@@ -29,15 +29,12 @@ export class PuterService {
   
   async initialize(): Promise<boolean> {
     try {
-      // Wait for Puter SDK to be available
       let attempts = 0;
       while (attempts < 50) {
         if (typeof (window as any).puter !== 'undefined' && 
             typeof (window as any).puter.ai !== 'undefined') {
           this.isInitialized = true;
-          console.log('✅ Puter SDK initialized successfully');
-          
-          // Test available models
+          console.log('Puter SDK initialized successfully');
           await this.testAvailableModels();
           return true;
         }
@@ -45,65 +42,54 @@ export class PuterService {
         attempts++;
       }
       
-      console.warn('❌ Puter SDK not available after timeout');
+      console.warn('Puter SDK not available after timeout');
       return false;
     } catch (error) {
-      console.error('❌ Error initializing Puter SDK:', error);
+      console.error('Error initializing Puter SDK:', error);
       return false;
     }
   }
   
   async testAvailableModels(): Promise<void> {
     const testModels = [
-      // DeepSeek Models (Priority)
-      'deepseek-v3', 'deepseek-r1',
-      
-      // OpenAI Models
-      'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo',
-      
-      // Anthropic Models
+      // Current working models
+      'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo',
       'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229',
-      
-      // Google Models
-      'gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro',
-      
-      // Meta Models
+      'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp',
+      'deepseek-v3', 'deepseek-r1',
       'llama-3.1-70b', 'llama-3.1-8b', 'llama-3.1-405b',
-      
-      // Other Models
       'mistral-large', 'mixtral-8x7b', 'codellama-34b'
     ];
     
-    console.log('🧪 Testing model availability...');
+    console.log('Testing model availability...');
     
     for (const model of testModels) {
       try {
         const response = await this.quickTest(model);
         if (response && response.length > 0 && !response.toLowerCase().includes('error')) {
           this.availableModels.add(model);
-          console.log(`✅ Model ${model} is available`);
+          console.log(`Model ${model} is available`);
         }
       } catch (error) {
-        console.warn(`❌ Model ${model} failed test:`, error);
+        console.warn(`Model ${model} failed test:`, error);
       }
       
-      // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    console.log('✅ Available models:', Array.from(this.availableModels));
+    console.log('Available models:', Array.from(this.availableModels));
     
     // Ensure DeepSeek V3 is working
     if (!this.availableModels.has('deepseek-v3')) {
-      console.warn('⚠️ DeepSeek V3 not available, attempting to fix...');
+      console.warn('DeepSeek V3 not available, attempting to fix...');
       try {
         const response = await this.forceTestModel('deepseek-v3');
         if (response) {
           this.availableModels.add('deepseek-v3');
-          console.log('✅ DeepSeek V3 fixed and available');
+          console.log('DeepSeek V3 fixed and available');
         }
       } catch (error) {
-        console.error('❌ Failed to fix DeepSeek V3:', error);
+        console.error('Failed to fix DeepSeek V3:', error);
       }
     }
   }
@@ -125,15 +111,12 @@ export class PuterService {
     try {
       let response;
       
-      // Method 1: Basic call
       try {
         response = await (window as any).puter.ai.chat('Test', { model });
       } catch (e1) {
-        // Method 2: Simple call
         try {
           response = await (window as any).puter.ai.chat('Test');
         } catch (e2) {
-          // Method 3: With explicit parameters
           response = await (window as any).puter.ai.chat('Test', {
             model: model,
             max_tokens: 5,
@@ -223,7 +206,6 @@ export class PuterService {
         console.warn('Failed to clear memory from localStorage:', error);
       }
     } else {
-      // Clear all memories for this session
       const keysToDelete = Array.from(this.chatMemory.keys()).filter(key => key.startsWith(sessionId));
       keysToDelete.forEach(key => {
         this.chatMemory.delete(key);
@@ -252,7 +234,7 @@ export class PuterService {
     };
     
     try {
-      console.log('🚀 Calling Puter AI with:', { message: message.slice(0, 100), model: defaultOptions.model });
+      console.log('Calling Puter AI with:', { message: message.slice(0, 100), model: defaultOptions.model });
       
       // Add chat memory if enabled and sessionId provided
       let contextMessages: Array<{ role: string; content: string }> = [];
@@ -262,9 +244,8 @@ export class PuterService {
       }
       
       const puterModel = this.mapModelName(defaultOptions.model!);
-      console.log('📡 Using Puter model:', defaultOptions.model, '->', puterModel);
+      console.log('Using Puter model:', defaultOptions.model, '->', puterModel);
       
-      // Enhanced API call with multiple fallback methods
       let response;
       let lastError;
       
@@ -276,10 +257,10 @@ export class PuterService {
           max_tokens: defaultOptions.max_tokens,
           temperature: defaultOptions.temperature
         });
-        console.log('✅ Method 1 successful');
+        console.log('Method 1 successful');
       } catch (error1) {
         lastError = error1;
-        console.warn('⚠️ Method 1 failed:', error1.message);
+        console.warn('Method 1 failed:', error1.message);
         
         // Method 2: Simple call with model
         try {
@@ -287,35 +268,35 @@ export class PuterService {
             model: puterModel,
             max_tokens: defaultOptions.max_tokens
           });
-          console.log('✅ Method 2 successful');
+          console.log('Method 2 successful');
         } catch (error2) {
           lastError = error2;
-          console.warn('⚠️ Method 2 failed:', error2.message);
+          console.warn('Method 2 failed:', error2.message);
           
           // Method 3: Basic call
           try {
             response = await (window as any).puter.ai.chat(message, {
               model: puterModel
             });
-            console.log('✅ Method 3 successful');
+            console.log('Method 3 successful');
           } catch (error3) {
             lastError = error3;
-            console.warn('⚠️ Method 3 failed:', error3.message);
+            console.warn('Method 3 failed:', error3.message);
             
             // Method 4: Fallback to default model
             try {
               response = await (window as any).puter.ai.chat(message);
-              console.log('✅ Method 4 (fallback) successful');
+              console.log('Method 4 (fallback) successful');
             } catch (error4) {
               lastError = error4;
-              console.error('❌ All methods failed');
+              console.error('All methods failed');
               throw new Error(`All API methods failed. Last error: ${error4.message}`);
             }
           }
         }
       }
       
-      console.log('📨 Raw Puter response received:', typeof response, response ? 'has content' : 'empty');
+      console.log('Raw Puter response received:', typeof response, response ? 'has content' : 'empty');
       const responseText = this.extractResponseText(response);
       
       if (!responseText || responseText.length < 5) {
@@ -328,10 +309,10 @@ export class PuterService {
         this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
       }
       
-      console.log('✅ Chat completed successfully');
+      console.log('Chat completed successfully');
       return responseText;
     } catch (error) {
-      console.error('❌ Puter AI Error:', error);
+      console.error('Puter AI Error:', error);
       return this.getEnhancedFallbackResponse(message, defaultOptions.model, error);
     }
   }
@@ -343,19 +324,19 @@ export class PuterService {
     }
     
     try {
-      console.log('🖼️ Processing image with Puter AI:', imageUrl);
+      console.log('Processing image with Puter AI:', imageUrl);
       let response;
       
       // Method 1: Direct image-to-text API
       try {
         if ((window as any).puter.ai.img2txt) {
           response = await (window as any).puter.ai.img2txt(imageUrl, prompt || 'Describe this image in detail');
-          console.log('✅ Direct img2txt method successful');
+          console.log('Direct img2txt method successful');
         } else {
           throw new Error('img2txt method not available');
         }
       } catch (error1) {
-        console.warn('⚠️ Direct img2txt failed:', error1.message);
+        console.warn('Direct img2txt failed:', error1.message);
         
         // Method 2: Vision model with image URL
         try {
@@ -369,23 +350,23 @@ export class PuterService {
               image_url: { url: imageUrl }
             }
           ], {
-            model: 'gpt-4o', // Use vision-capable model
+            model: 'gpt-4o',
             max_tokens: 1000
           });
-          console.log('✅ Vision model method successful');
+          console.log('Vision model method successful');
         } catch (error2) {
-          console.warn('⚠️ Vision model failed:', error2.message);
+          console.warn('Vision model failed:', error2.message);
           
           // Method 3: Fallback with text description
           response = await (window as any).puter.ai.chat(
             `I have an image that I'd like you to analyze. ${prompt || 'Please describe what you would expect to see in a typical image and provide a helpful response.'}`,
             { model: 'gpt-4o-mini' }
           );
-          console.log('✅ Fallback method used');
+          console.log('Fallback method used');
         }
       }
       
-      console.log('📨 Puter AI image response received');
+      console.log('Puter AI image response received');
       const responseText = this.extractResponseText(response);
       
       // Add to memory if sessionId provided
@@ -396,13 +377,13 @@ export class PuterService {
       
       return responseText;
     } catch (error) {
-      console.error('❌ Puter imageToText error:', error);
+      console.error('Puter imageToText error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return `I apologize, but I'm unable to process the image at the moment. 
 
-**Error details:** ${errorMessage}
+Error details: ${errorMessage}
 
-**Possible solutions:**
+Possible solutions:
 1. Ensure the image URL is accessible
 2. Try uploading the image again
 3. Check your internet connection
@@ -441,7 +422,7 @@ Please try again or contact support if the issue persists.`;
         }
       ];
 
-      console.log('📁 Sending files to Puter AI:', { messageCount: messages.length, model: defaultOptions.model });
+      console.log('Sending files to Puter AI:', { messageCount: messages.length, model: defaultOptions.model });
       
       let response;
       try {
@@ -457,7 +438,7 @@ Please try again or contact support if the issue persists.`;
         return response;
       }
       
-      console.log('📨 Puter AI file response received');
+      console.log('Puter AI file response received');
       const responseText = this.extractResponseText(response);
       
       // Add to memory if enabled
@@ -469,13 +450,13 @@ Please try again or contact support if the issue persists.`;
       
       return responseText;
     } catch (error) {
-      console.error('❌ Puter chatWithFiles error:', error);
+      console.error('Puter chatWithFiles error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return `I apologize, but I'm unable to process the files at the moment.
 
-**Error details:** ${errorMessage}
+Error details: ${errorMessage}
 
-**Possible solutions:**
+Possible solutions:
 1. Try uploading smaller files
 2. Ensure files are in supported formats
 3. Check your internet connection
@@ -488,18 +469,17 @@ Please try again or contact support if the issue persists.`;
   private getEnhancedFallbackResponse(message: string, model?: string, error?: any): string {
     const modelName = model ? this.getModelDisplayName(model) : 'AI';
     
-    // Provide more intelligent fallback responses based on message content
     if (message.toLowerCase().includes('code') || message.toLowerCase().includes('program')) {
       return `I'd be happy to help with coding! However, I'm currently experiencing connectivity issues with the ${modelName} service.
 
-**Quick Coding Tips:**
-1. **For debugging**: Check syntax, indentation, and variable names
-2. **For new projects**: Start with a basic structure and build incrementally
-3. **For algorithms**: Break down the problem into smaller steps
+Quick Coding Tips:
+1. For debugging: Check syntax, indentation, and variable names
+2. For new projects: Start with a basic structure and build incrementally
+3. For algorithms: Break down the problem into smaller steps
 
 Please try again in a moment when the connection is restored.
 
-${error ? `\n**Technical details:** ${error.message || error}` : ''}`;
+${error ? `\nTechnical details: ${error.message || error}` : ''}`;
     }
     
     if (message.toLowerCase().includes('explain') || message.toLowerCase().includes('what is')) {
@@ -507,14 +487,14 @@ ${error ? `\n**Technical details:** ${error.message || error}` : ''}`;
 
 I'm currently experiencing connectivity issues with the ${modelName} service, but I'd be happy to help once the connection is restored.
 
-**In the meantime:**
+In the meantime:
 - Try rephrasing your question
 - Break complex topics into smaller questions
 - Check if there are specific aspects you'd like me to focus on
 
 Please try again shortly!
 
-${error ? `\n**Technical details:** ${error.message || error}` : ''}`;
+${error ? `\nTechnical details: ${error.message || error}` : ''}`;
     }
     
     const fallbackResponses = [
@@ -532,18 +512,17 @@ Please try again in a few moments - I should be back online soon!`,
     ];
     
     const baseResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-    return error ? `${baseResponse}\n\n**Technical details:** ${error.message || error}` : baseResponse;
+    return error ? `${baseResponse}\n\nTechnical details: ${error.message || error}` : baseResponse;
   }
   
   private extractResponseText(response: any): string {
-    console.log('🔍 Extracting text from response:', typeof response, response ? 'has content' : 'empty');
+    console.log('Extracting text from response:', typeof response, response ? 'has content' : 'empty');
     
     if (typeof response === 'string' && response.trim()) {
       return response.trim();
     }
     
     if (response && typeof response === 'object') {
-      // Handle various Puter response formats
       const possiblePaths = [
         response.message?.content,
         response.message?.content?.[0]?.text,
@@ -565,7 +544,6 @@ Please try again in a few moments - I should be back online soon!`,
         }
       }
       
-      // Try to stringify if it's a complex object
       try {
         const stringified = JSON.stringify(response, null, 2);
         if (stringified && stringified !== '{}' && stringified !== 'null') {
@@ -597,18 +575,17 @@ Please try again in a few moments - I should be back online soon!`,
       'deepseek-v3',
       'deepseek-r1',
       
-      // OpenAI Models
+      // OpenAI Models (Current)
       'gpt-4o',
       'gpt-4o-mini',
-      'gpt-4-turbo',
       'gpt-3.5-turbo',
       
-      // Anthropic Models
+      // Anthropic Models (Current)
       'claude-3-5-sonnet-20241022',
       'claude-3-5-haiku-20241022',
       'claude-3-opus-20240229',
       
-      // Google Models
+      // Google Models (Current)
       'gemini-1.5-flash',
       'gemini-1.5-pro',
       'gemini-2.0-flash-exp',
@@ -631,18 +608,17 @@ Please try again in a few moments - I should be back online soon!`,
       'deepseek-r1': 'DeepSeek R1',
       'deepseek-v3': 'DeepSeek V3',
       
-      // OpenAI Models
+      // OpenAI Models (Current)
       'gpt-4o': 'GPT-4o',
       'gpt-4o-mini': 'GPT-4o Mini',
-      'gpt-4-turbo': 'GPT-4 Turbo',
       'gpt-3.5-turbo': 'GPT-3.5 Turbo',
       
-      // Anthropic Models
+      // Anthropic Models (Current)
       'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
       'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
       'claude-3-opus-20240229': 'Claude 3 Opus',
       
-      // Google Models
+      // Google Models (Current)
       'gemini-1.5-flash': 'Gemini 1.5 Flash',
       'gemini-1.5-pro': 'Gemini 1.5 Pro',
       'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
@@ -668,18 +644,17 @@ Please try again in a few moments - I should be back online soon!`,
       'deepseek-v3': 'deepseek-v3',
       'deepseek-r1': 'deepseek-r1',
       
-      // OpenAI Models
+      // OpenAI Models (Current)
       'gpt-4o': 'gpt-4o',
       'gpt-4o-mini': 'gpt-4o-mini',
-      'gpt-4-turbo': 'gpt-4-turbo',
       'gpt-3.5-turbo': 'gpt-3.5-turbo',
       
-      // Anthropic Models
+      // Anthropic Models (Current)
       'claude-3-5-sonnet-20241022': 'claude-3-5-sonnet-20241022',
       'claude-3-5-haiku-20241022': 'claude-3-5-haiku-20241022',
       'claude-3-opus-20240229': 'claude-3-opus-20240229',
       
-      // Google Models
+      // Google Models (Current)
       'gemini-1.5-flash': 'gemini-1.5-flash',
       'gemini-1.5-pro': 'gemini-1.5-pro',
       'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
@@ -697,11 +672,11 @@ Please try again in a few moments - I should be back online soon!`,
     
     const mappedModel = directMapping[modelId];
     if (!mappedModel) {
-      console.warn(`⚠️ Model ${modelId} not found in mapping, using deepseek-v3 as fallback`);
+      console.warn(`Model ${modelId} not found in mapping, using deepseek-v3 as fallback`);
       return 'deepseek-v3';
     }
     
-    console.log(`🔄 Mapped ${modelId} to ${mappedModel}`);
+    console.log(`Mapped ${modelId} to ${mappedModel}`);
     return mappedModel;
   }
   
@@ -711,7 +686,7 @@ Please try again in a few moments - I should be back online soon!`,
       const response = await this.chat('Hello', { model: modelId, max_tokens: 10 });
       return response.length > 0 && !response.includes('error') && !response.includes('not available');
     } catch (error) {
-      console.warn(`❌ Model ${modelId} test failed:`, error);
+      console.warn(`Model ${modelId} test failed:`, error);
       return false;
     }
   }

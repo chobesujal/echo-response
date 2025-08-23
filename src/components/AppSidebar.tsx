@@ -158,7 +158,7 @@ export function AppSidebar({
           <SidebarGroupContent>
             <div className="flex items-center gap-2 px-2 py-3 border-b border-sidebar-border">
               <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                <Sparkles className="w-3 h-3 text-white" />
+                <div className="w-3 h-3 bg-white rounded-sm"></div>
               </div>
               {!collapsed && <h2 className="text-lg font-semibold text-sidebar-foreground">Cosmic AI</h2>}
             </div>
@@ -172,7 +172,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={onNewChat}
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700 tap-target"
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   {!collapsed && <span>New Conversation</span>}
@@ -184,7 +184,7 @@ export function AppSidebar({
 
         {/* Chat History */}
         <SidebarGroup>
-          <SidebarGroupLabel>Recent Conversations</SidebarGroupLabel>
+          <SidebarGroupLabel>Conversations</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {chatHistory.slice(0, 10).map((chat) => (
@@ -192,7 +192,7 @@ export function AppSidebar({
                   <div className={`group relative w-full ${currentChatId === chat.id ? 'bg-sidebar-accent rounded-md' : ''}`}>
                     <SidebarMenuButton 
                       onClick={() => onLoadChat(chat.id)}
-                      className="w-full justify-start pr-8 tap-target"
+                      className="w-full justify-start pr-8"
                     >
                       <div className="flex items-center min-w-0 flex-1">
                         <MessageSquare className="mr-2 h-4 w-4 shrink-0" />
@@ -211,7 +211,7 @@ export function AppSidebar({
                     {!collapsed && (
                       <button
                         onClick={(e) => handleDeleteChat(chat.id, e)}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 h-6 w-6 rounded hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-opacity tap-target"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 h-6 w-6 rounded hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-opacity"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -230,13 +230,13 @@ export function AppSidebar({
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={exportChats} className="tap-target">
+                  <SidebarMenuButton onClick={exportChats}>
                     <Download className="mr-2 h-4 w-4" />
                     Export Chats
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={importChats} className="tap-target">
+                  <SidebarMenuButton onClick={importChats}>
                     <Upload className="mr-2 h-4 w-4" />
                     Import Chats
                   </SidebarMenuButton>
@@ -254,7 +254,7 @@ export function AppSidebar({
                 <div className="flex items-center justify-between w-full p-2">
                   <UserMenu />
                   {!collapsed && (
-                    <SidebarMenuButton onClick={onToggleDarkMode} className="ml-auto tap-target">
+                    <SidebarMenuButton onClick={onToggleDarkMode} className="ml-auto">
                       {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                     </SidebarMenuButton>
                   )}

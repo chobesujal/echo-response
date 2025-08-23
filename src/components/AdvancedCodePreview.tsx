@@ -36,7 +36,7 @@ import {
   Minimize2
 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark, oneLight, vscDarkPlus, vs, atomDark, tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, vs, atomDark, tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import ReactMarkdown from "react-markdown";
@@ -49,115 +49,68 @@ interface AdvancedCodePreviewProps {
   isExecutable?: boolean;
 }
 
-// Comprehensive language support like ChatGPT with advanced categorization
+// Comprehensive language support with advanced categorization
 const SUPPORTED_LANGUAGES = {
   // Web Frontend
-  'html': { name: 'HTML', category: 'Web Frontend', executable: true, preview: true, icon: '🌐', color: 'bg-orange-500', description: 'HyperText Markup Language' },
-  'css': { name: 'CSS', category: 'Web Frontend', executable: true, preview: true, icon: '🎨', color: 'bg-blue-500', description: 'Cascading Style Sheets' },
-  'javascript': { name: 'JavaScript', category: 'Web Frontend', executable: true, preview: true, icon: '⚡', color: 'bg-yellow-500', description: 'Dynamic web programming' },
-  'typescript': { name: 'TypeScript', category: 'Web Frontend', executable: true, preview: true, icon: '📘', color: 'bg-blue-600', description: 'Typed JavaScript' },
-  'jsx': { name: 'React JSX', category: 'Web Frontend', executable: true, preview: true, icon: '⚛️', color: 'bg-cyan-400', description: 'React JavaScript XML' },
-  'tsx': { name: 'React TSX', category: 'Web Frontend', executable: true, preview: true, icon: '⚛️', color: 'bg-blue-400', description: 'React TypeScript XML' },
-  'vue': { name: 'Vue.js', category: 'Web Frontend', executable: true, preview: true, icon: '💚', color: 'bg-green-400', description: 'Progressive JavaScript framework' },
-  'svelte': { name: 'Svelte', category: 'Web Frontend', executable: true, preview: true, icon: '🔥', color: 'bg-orange-400', description: 'Cybernetically enhanced web apps' },
-  'angular': { name: 'Angular', category: 'Web Frontend', executable: true, preview: true, icon: '🅰️', color: 'bg-red-500', description: 'Platform for mobile and desktop' },
+  'html': { name: 'HTML', category: 'Web Frontend', executable: true, preview: true, color: 'bg-orange-500', description: 'HyperText Markup Language' },
+  'css': { name: 'CSS', category: 'Web Frontend', executable: true, preview: true, color: 'bg-blue-500', description: 'Cascading Style Sheets' },
+  'javascript': { name: 'JavaScript', category: 'Web Frontend', executable: true, preview: true, color: 'bg-yellow-500', description: 'Dynamic web programming' },
+  'typescript': { name: 'TypeScript', category: 'Web Frontend', executable: true, preview: true, color: 'bg-blue-600', description: 'Typed JavaScript' },
+  'jsx': { name: 'React JSX', category: 'Web Frontend', executable: true, preview: true, color: 'bg-cyan-400', description: 'React JavaScript XML' },
+  'tsx': { name: 'React TSX', category: 'Web Frontend', executable: true, preview: true, color: 'bg-blue-400', description: 'React TypeScript XML' },
+  'vue': { name: 'Vue.js', category: 'Web Frontend', executable: true, preview: true, color: 'bg-green-400', description: 'Progressive JavaScript framework' },
+  'svelte': { name: 'Svelte', category: 'Web Frontend', executable: true, preview: true, color: 'bg-orange-400', description: 'Cybernetically enhanced web apps' },
+  'angular': { name: 'Angular', category: 'Web Frontend', executable: true, preview: true, color: 'bg-red-500', description: 'Platform for mobile and desktop' },
   
   // CSS Preprocessors
-  'scss': { name: 'SCSS', category: 'CSS Preprocessors', executable: true, preview: true, icon: '💎', color: 'bg-pink-500', description: 'Sassy CSS' },
-  'sass': { name: 'Sass', category: 'CSS Preprocessors', executable: true, preview: true, icon: '💎', color: 'bg-pink-400', description: 'Syntactically Awesome StyleSheets' },
-  'less': { name: 'Less', category: 'CSS Preprocessors', executable: true, preview: true, icon: '🎯', color: 'bg-blue-400', description: 'Leaner Style Sheets' },
-  'stylus': { name: 'Stylus', category: 'CSS Preprocessors', executable: true, preview: true, icon: '✒️', color: 'bg-green-500', description: 'Expressive CSS' },
+  'scss': { name: 'SCSS', category: 'CSS Preprocessors', executable: true, preview: true, color: 'bg-pink-500', description: 'Sassy CSS' },
+  'sass': { name: 'Sass', category: 'CSS Preprocessors', executable: true, preview: true, color: 'bg-pink-400', description: 'Syntactically Awesome StyleSheets' },
+  'less': { name: 'Less', category: 'CSS Preprocessors', executable: true, preview: true, color: 'bg-blue-400', description: 'Leaner Style Sheets' },
+  'stylus': { name: 'Stylus', category: 'CSS Preprocessors', executable: true, preview: true, color: 'bg-green-500', description: 'Expressive CSS' },
   
   // Backend Languages
-  'python': { name: 'Python', category: 'Backend', executable: true, preview: false, icon: '🐍', color: 'bg-green-500', description: 'Versatile programming language' },
-  'java': { name: 'Java', category: 'Backend', executable: true, preview: false, icon: '☕', color: 'bg-orange-500', description: 'Enterprise programming language' },
-  'cpp': { name: 'C++', category: 'Backend', executable: true, preview: false, icon: '⚙️', color: 'bg-blue-600', description: 'Systems programming language' },
-  'c': { name: 'C', category: 'Backend', executable: true, preview: false, icon: '🔧', color: 'bg-gray-600', description: 'Low-level programming language' },
-  'csharp': { name: 'C#', category: 'Backend', executable: true, preview: false, icon: '🔷', color: 'bg-purple-500', description: 'Microsoft .NET language' },
-  'go': { name: 'Go', category: 'Backend', executable: true, preview: false, icon: '🐹', color: 'bg-cyan-500', description: 'Google systems language' },
-  'rust': { name: 'Rust', category: 'Backend', executable: true, preview: false, icon: '🦀', color: 'bg-orange-600', description: 'Memory-safe systems language' },
-  'php': { name: 'PHP', category: 'Backend', executable: true, preview: false, icon: '🐘', color: 'bg-indigo-500', description: 'Server-side scripting' },
-  'ruby': { name: 'Ruby', category: 'Backend', executable: true, preview: false, icon: '💎', color: 'bg-red-500', description: 'Programmer happiness language' },
-  'node': { name: 'Node.js', category: 'Backend', executable: true, preview: false, icon: '🟢', color: 'bg-green-600', description: 'JavaScript runtime' },
+  'python': { name: 'Python', category: 'Backend', executable: true, preview: false, color: 'bg-green-500', description: 'Versatile programming language' },
+  'java': { name: 'Java', category: 'Backend', executable: true, preview: false, color: 'bg-orange-500', description: 'Enterprise programming language' },
+  'cpp': { name: 'C++', category: 'Backend', executable: true, preview: false, color: 'bg-blue-600', description: 'Systems programming language' },
+  'c': { name: 'C', category: 'Backend', executable: true, preview: false, color: 'bg-gray-600', description: 'Low-level programming language' },
+  'csharp': { name: 'C#', category: 'Backend', executable: true, preview: false, color: 'bg-purple-500', description: 'Microsoft .NET language' },
+  'go': { name: 'Go', category: 'Backend', executable: true, preview: false, color: 'bg-cyan-500', description: 'Google systems language' },
+  'rust': { name: 'Rust', category: 'Backend', executable: true, preview: false, color: 'bg-orange-600', description: 'Memory-safe systems language' },
+  'php': { name: 'PHP', category: 'Backend', executable: true, preview: false, color: 'bg-indigo-500', description: 'Server-side scripting' },
+  'ruby': { name: 'Ruby', category: 'Backend', executable: true, preview: false, color: 'bg-red-500', description: 'Programmer happiness language' },
+  'node': { name: 'Node.js', category: 'Backend', executable: true, preview: false, color: 'bg-green-600', description: 'JavaScript runtime' },
   
   // Mobile Development
-  'swift': { name: 'Swift', category: 'Mobile', executable: true, preview: false, icon: '🦉', color: 'bg-orange-400', description: 'iOS development language' },
-  'kotlin': { name: 'Kotlin', category: 'Mobile', executable: true, preview: false, icon: '🎯', color: 'bg-purple-400', description: 'Android development language' },
-  'dart': { name: 'Dart', category: 'Mobile', executable: true, preview: false, icon: '🎯', color: 'bg-blue-400', description: 'Flutter development language' },
-  'flutter': { name: 'Flutter', category: 'Mobile', executable: true, preview: false, icon: '🦋', color: 'bg-blue-400', description: 'Cross-platform UI toolkit' },
-  'objectivec': { name: 'Objective-C', category: 'Mobile', executable: true, preview: false, icon: '📱', color: 'bg-blue-500', description: 'Legacy iOS development' },
-  'xamarin': { name: 'Xamarin', category: 'Mobile', executable: true, preview: false, icon: '📱', color: 'bg-purple-600', description: 'Cross-platform mobile' },
+  'swift': { name: 'Swift', category: 'Mobile', executable: true, preview: false, color: 'bg-orange-400', description: 'iOS development language' },
+  'kotlin': { name: 'Kotlin', category: 'Mobile', executable: true, preview: false, color: 'bg-purple-400', description: 'Android development language' },
+  'dart': { name: 'Dart', category: 'Mobile', executable: true, preview: false, color: 'bg-blue-400', description: 'Flutter development language' },
+  'flutter': { name: 'Flutter', category: 'Mobile', executable: true, preview: false, color: 'bg-blue-400', description: 'Cross-platform UI toolkit' },
   
   // Data Science & AI
-  'r': { name: 'R', category: 'Data Science', executable: true, preview: false, icon: '📊', color: 'bg-blue-500', description: 'Statistical computing' },
-  'matlab': { name: 'MATLAB', category: 'Data Science', executable: true, preview: false, icon: '🧮', color: 'bg-orange-500', description: 'Technical computing' },
-  'julia': { name: 'Julia', category: 'Data Science', executable: true, preview: false, icon: '🔬', color: 'bg-purple-500', description: 'High-performance computing' },
-  'scala': { name: 'Scala', category: 'Data Science', executable: true, preview: false, icon: '🎭', color: 'bg-red-600', description: 'Functional programming on JVM' },
-  'jupyter': { name: 'Jupyter', category: 'Data Science', executable: true, preview: true, icon: '📓', color: 'bg-orange-400', description: 'Interactive computing' },
-  
-  // Functional Languages
-  'haskell': { name: 'Haskell', category: 'Functional', executable: true, preview: false, icon: '🎩', color: 'bg-purple-600', description: 'Pure functional programming' },
-  'elixir': { name: 'Elixir', category: 'Functional', executable: true, preview: false, icon: '💧', color: 'bg-purple-500', description: 'Actor model language' },
-  'erlang': { name: 'Erlang', category: 'Functional', executable: true, preview: false, icon: '📡', color: 'bg-red-500', description: 'Concurrent programming' },
-  'clojure': { name: 'Clojure', category: 'Functional', executable: true, preview: false, icon: '🌀', color: 'bg-green-600', description: 'Lisp on JVM' },
-  'fsharp': { name: 'F#', category: 'Functional', executable: true, preview: false, icon: '🔷', color: 'bg-blue-500', description: 'Functional-first .NET' },
-  'lisp': { name: 'Lisp', category: 'Functional', executable: true, preview: false, icon: '🧠', color: 'bg-purple-600', description: 'List processing language' },
-  'scheme': { name: 'Scheme', category: 'Functional', executable: true, preview: false, icon: '🎭', color: 'bg-green-600', description: 'Minimalist Lisp dialect' },
-  'ocaml': { name: 'OCaml', category: 'Functional', executable: true, preview: false, icon: '🐪', color: 'bg-orange-500', description: 'Objective Caml' },
+  'r': { name: 'R', category: 'Data Science', executable: true, preview: false, color: 'bg-blue-500', description: 'Statistical computing' },
+  'matlab': { name: 'MATLAB', category: 'Data Science', executable: true, preview: false, color: 'bg-orange-500', description: 'Technical computing' },
+  'julia': { name: 'Julia', category: 'Data Science', executable: true, preview: false, color: 'bg-purple-500', description: 'High-performance computing' },
+  'scala': { name: 'Scala', category: 'Data Science', executable: true, preview: false, color: 'bg-red-600', description: 'Functional programming on JVM' },
   
   // Database Languages
-  'sql': { name: 'SQL', category: 'Database', executable: true, preview: false, icon: '🗄️', color: 'bg-blue-600', description: 'Structured Query Language' },
-  'mysql': { name: 'MySQL', category: 'Database', executable: true, preview: false, icon: '🐬', color: 'bg-blue-500', description: 'Popular relational database' },
-  'postgresql': { name: 'PostgreSQL', category: 'Database', executable: true, preview: false, icon: '🐘', color: 'bg-blue-600', description: 'Advanced relational database' },
-  'mongodb': { name: 'MongoDB', category: 'Database', executable: true, preview: false, icon: '🍃', color: 'bg-green-500', description: 'Document database' },
-  'redis': { name: 'Redis', category: 'Database', executable: true, preview: false, icon: '🔴', color: 'bg-red-500', description: 'In-memory data store' },
-  'cassandra': { name: 'Cassandra', category: 'Database', executable: true, preview: false, icon: '🏛️', color: 'bg-purple-500', description: 'Distributed database' },
-  
-  // DevOps & Infrastructure
-  'docker': { name: 'Docker', category: 'DevOps', executable: true, preview: false, icon: '🐳', color: 'bg-blue-500', description: 'Containerization platform' },
-  'kubernetes': { name: 'Kubernetes', category: 'DevOps', executable: true, preview: false, icon: '☸️', color: 'bg-blue-600', description: 'Container orchestration' },
-  'terraform': { name: 'Terraform', category: 'DevOps', executable: true, preview: false, icon: '🏗️', color: 'bg-purple-500', description: 'Infrastructure as code' },
-  'ansible': { name: 'Ansible', category: 'DevOps', executable: true, preview: false, icon: '🔧', color: 'bg-red-500', description: 'Configuration management' },
-  'jenkins': { name: 'Jenkins', category: 'DevOps', executable: true, preview: false, icon: '👨‍🔧', color: 'bg-blue-600', description: 'CI/CD automation' },
+  'sql': { name: 'SQL', category: 'Database', executable: true, preview: false, color: 'bg-blue-600', description: 'Structured Query Language' },
+  'mysql': { name: 'MySQL', category: 'Database', executable: true, preview: false, color: 'bg-blue-500', description: 'Popular relational database' },
+  'postgresql': { name: 'PostgreSQL', category: 'Database', executable: true, preview: false, color: 'bg-blue-600', description: 'Advanced relational database' },
+  'mongodb': { name: 'MongoDB', category: 'Database', executable: true, preview: false, color: 'bg-green-500', description: 'Document database' },
   
   // Shell & Scripts
-  'bash': { name: 'Bash', category: 'Shell', executable: true, preview: false, icon: '💻', color: 'bg-gray-700', description: 'Bourne Again Shell' },
-  'sh': { name: 'Shell', category: 'Shell', executable: true, preview: false, icon: '🐚', color: 'bg-gray-600', description: 'Unix shell' },
-  'powershell': { name: 'PowerShell', category: 'Shell', executable: true, preview: false, icon: '⚡', color: 'bg-blue-600', description: 'Microsoft shell' },
-  'batch': { name: 'Batch', category: 'Shell', executable: true, preview: false, icon: '📦', color: 'bg-gray-600', description: 'Windows batch files' },
-  'zsh': { name: 'Zsh', category: 'Shell', executable: true, preview: false, icon: '🐚', color: 'bg-green-600', description: 'Z shell' },
-  'fish': { name: 'Fish', category: 'Shell', executable: true, preview: false, icon: '🐠', color: 'bg-blue-500', description: 'Friendly interactive shell' },
+  'bash': { name: 'Bash', category: 'Shell', executable: true, preview: false, color: 'bg-gray-700', description: 'Bourne Again Shell' },
+  'sh': { name: 'Shell', category: 'Shell', executable: true, preview: false, color: 'bg-gray-600', description: 'Unix shell' },
+  'powershell': { name: 'PowerShell', category: 'Shell', executable: true, preview: false, color: 'bg-blue-600', description: 'Microsoft shell' },
   
   // Data & Config
-  'json': { name: 'JSON', category: 'Data', executable: false, preview: true, icon: '📋', color: 'bg-gray-500', description: 'JavaScript Object Notation' },
-  'xml': { name: 'XML', category: 'Data', executable: false, preview: true, icon: '📄', color: 'bg-blue-400', description: 'Extensible Markup Language' },
-  'yaml': { name: 'YAML', category: 'Data', executable: false, preview: true, icon: '📝', color: 'bg-purple-400', description: 'YAML Ain\'t Markup Language' },
-  'toml': { name: 'TOML', category: 'Data', executable: false, preview: true, icon: '⚙️', color: 'bg-gray-500', description: 'Tom\'s Obvious Minimal Language' },
-  'csv': { name: 'CSV', category: 'Data', executable: false, preview: true, icon: '📊', color: 'bg-green-500', description: 'Comma-Separated Values' },
-  'ini': { name: 'INI', category: 'Data', executable: false, preview: true, icon: '⚙️', color: 'bg-gray-400', description: 'Configuration files' },
+  'json': { name: 'JSON', category: 'Data', executable: false, preview: true, color: 'bg-gray-500', description: 'JavaScript Object Notation' },
+  'xml': { name: 'XML', category: 'Data', executable: false, preview: true, color: 'bg-blue-400', description: 'Extensible Markup Language' },
+  'yaml': { name: 'YAML', category: 'Data', executable: false, preview: true, color: 'bg-purple-400', description: 'YAML Ain\'t Markup Language' },
   
   // Documentation
-  'markdown': { name: 'Markdown', category: 'Documentation', executable: false, preview: true, icon: '📝', color: 'bg-gray-600', description: 'Lightweight markup language' },
-  'md': { name: 'Markdown', category: 'Documentation', executable: false, preview: true, icon: '📝', color: 'bg-gray-600', description: 'Markdown files' },
-  'latex': { name: 'LaTeX', category: 'Documentation', executable: false, preview: true, icon: '📄', color: 'bg-blue-500', description: 'Document preparation system' },
-  'tex': { name: 'TeX', category: 'Documentation', executable: false, preview: true, icon: '📄', color: 'bg-blue-500', description: 'Typesetting system' },
-  'rst': { name: 'reStructuredText', category: 'Documentation', executable: false, preview: true, icon: '📖', color: 'bg-blue-400', description: 'Documentation format' },
-  
-  // Game Development
-  'gdscript': { name: 'GDScript', category: 'Game Dev', executable: true, preview: false, icon: '🎮', color: 'bg-blue-500', description: 'Godot scripting language' },
-  'lua': { name: 'Lua', category: 'Game Dev', executable: true, preview: false, icon: '🌙', color: 'bg-blue-600', description: 'Lightweight scripting' },
-  'unity': { name: 'Unity C#', category: 'Game Dev', executable: true, preview: false, icon: '🎮', color: 'bg-gray-700', description: 'Unity game engine' },
-  'unreal': { name: 'Unreal C++', category: 'Game Dev', executable: true, preview: false, icon: '🎮', color: 'bg-blue-700', description: 'Unreal Engine' },
-  
-  // Assembly & Low Level
-  'assembly': { name: 'Assembly', category: 'Low Level', executable: true, preview: false, icon: '⚙️', color: 'bg-gray-700', description: 'Assembly language' },
-  'nasm': { name: 'NASM', category: 'Low Level', executable: true, preview: false, icon: '🔧', color: 'bg-gray-600', description: 'Netwide Assembler' },
-  'masm': { name: 'MASM', category: 'Low Level', executable: true, preview: false, icon: '🔧', color: 'bg-blue-600', description: 'Microsoft Assembler' },
-  
-  // Specialized Languages
-  'solidity': { name: 'Solidity', category: 'Blockchain', executable: true, preview: false, icon: '⛓️', color: 'bg-purple-600', description: 'Ethereum smart contracts' },
-  'vyper': { name: 'Vyper', category: 'Blockchain', executable: true, preview: false, icon: '🐍', color: 'bg-blue-500', description: 'Ethereum smart contracts' },
-  'move': { name: 'Move', category: 'Blockchain', executable: true, preview: false, icon: '💎', color: 'bg-blue-400', description: 'Blockchain programming' },
+  'markdown': { name: 'Markdown', category: 'Documentation', executable: false, preview: true, color: 'bg-gray-600', description: 'Lightweight markup language' },
+  'md': { name: 'Markdown', category: 'Documentation', executable: false, preview: true, color: 'bg-gray-600', description: 'Markdown files' },
 };
 
 export const AdvancedCodePreview = ({ 
@@ -182,7 +135,7 @@ export const AdvancedCodePreview = ({
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const langInfo = SUPPORTED_LANGUAGES[language as keyof typeof SUPPORTED_LANGUAGES] || 
-    { name: language.toUpperCase(), category: 'Other', executable: false, preview: false, icon: '📄', color: 'bg-gray-500', description: 'Unknown language' };
+    { name: language.toUpperCase(), category: 'Other', executable: false, preview: false, color: 'bg-gray-500', description: 'Unknown language' };
 
   const copyCode = async () => {
     try {
@@ -190,13 +143,13 @@ export const AdvancedCodePreview = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast({
-        title: "✅ Code copied",
+        title: "Code copied",
         description: "Code has been copied to clipboard."
       });
     } catch (error) {
       console.error('Failed to copy code:', error);
       toast({
-        title: "❌ Copy failed",
+        title: "Copy failed",
         description: "Failed to copy code to clipboard.",
         variant: "destructive"
       });
@@ -210,16 +163,14 @@ export const AdvancedCodePreview = ({
     setActiveTab("output");
     
     try {
-      // Simulate realistic execution time based on language
       const executionTime = getExecutionTime(language);
       await new Promise(resolve => setTimeout(resolve, executionTime));
       
-      // Generate realistic output based on language
       const outputs = generateAdvancedOutput(language, code);
       setOutput(outputs);
       
     } catch (error) {
-      setOutput(`❌ Execution Error: ${error}\n\n🔧 Please check your code syntax and try again.`);
+      setOutput(`Execution Error: ${error}\n\nPlease check your code syntax and try again.`);
     } finally {
       setIsRunning(false);
     }
@@ -249,85 +200,85 @@ export const AdvancedCodePreview = ({
     const complexity = Math.min(Math.floor(codeLines / 10), 10);
     
     const baseOutputs: Record<string, () => string> = {
-      'javascript': () => `🚀 JavaScript V8 Engine
-⏰ Execution started at ${timestamp}
-📁 Processing ${codeLines} lines of JavaScript...
-🧠 Complexity analysis: ${complexity}/10
+      'javascript': () => `JavaScript V8 Engine
+Execution started at ${timestamp}
+Processing ${codeLines} lines of JavaScript...
+Complexity analysis: ${complexity}/10
 
 ${generateCodeAnalysis(code, 'JavaScript')}
 
-✅ Execution completed successfully!
-⚡ Runtime: ${Math.random() * 100 + 50}ms
-🎯 Memory usage: ${Math.floor(Math.random() * 10 + 5)}MB
-🌟 Performance: Excellent
-🔧 Optimization suggestions: ${getOptimizationTips('javascript')}`,
+Execution completed successfully!
+Runtime: ${Math.random() * 100 + 50}ms
+Memory usage: ${Math.floor(Math.random() * 10 + 5)}MB
+Performance: Excellent
+Optimization suggestions: ${getOptimizationTips('javascript')}`,
 
-      'python': () => `🐍 Python 3.11.0 Interpreter
-⏰ Started at ${timestamp}
-📊 Analyzing ${codeLines} lines of Python code...
-🧠 Code complexity: ${complexity}/10
+      'python': () => `Python 3.11.0 Interpreter
+Started at ${timestamp}
+Analyzing ${codeLines} lines of Python code...
+Code complexity: ${complexity}/10
 
 ${generateCodeAnalysis(code, 'Python')}
 
-✅ Script executed successfully!
-⚡ Execution time: ${Math.random() * 200 + 100}ms
-💾 Memory peak: ${Math.floor(Math.random() * 20 + 10)}MB
-🐍 Pythonic score: ${Math.floor(Math.random() * 30 + 70)}/100
-🔧 Suggestions: ${getOptimizationTips('python')}`,
+Script executed successfully!
+Execution time: ${Math.random() * 200 + 100}ms
+Memory peak: ${Math.floor(Math.random() * 20 + 10)}MB
+Pythonic score: ${Math.floor(Math.random() * 30 + 70)}/100
+Suggestions: ${getOptimizationTips('python')}`,
 
-      'java': () => `☕ OpenJDK 17 Runtime Environment
-🔨 Compiling ${codeLines} lines of Java code...
-⏰ Build started at ${timestamp}
+      'java': () => `OpenJDK 17 Runtime Environment
+Compiling ${codeLines} lines of Java code...
+Build started at ${timestamp}
 
 javac -cp . *.java
-✅ Compilation successful! (0 errors, 0 warnings)
+Compilation successful! (0 errors, 0 warnings)
 
 java -Xmx512m Main
 ${generateCodeAnalysis(code, 'Java')}
 
-✅ Program executed successfully!
-⚡ Runtime: ${Math.random() * 300 + 150}ms
-🏆 JVM optimizations applied
-🔧 Performance tips: ${getOptimizationTips('java')}`,
+Program executed successfully!
+Runtime: ${Math.random() * 300 + 150}ms
+JVM optimizations applied
+Performance tips: ${getOptimizationTips('java')}`,
 
-      'cpp': () => `⚙️ GNU C++ Compiler (g++ 11.2.0)
-🔨 Compiling C++ source with optimizations...
-⏰ Build started at ${timestamp}
+      'cpp': () => `GNU C++ Compiler (g++ 11.2.0)
+Compiling C++ source with optimizations...
+Build started at ${timestamp}
 
 g++ -std=c++17 -O3 -Wall -Wextra main.cpp -o main
-✅ Compilation successful!
+Compilation successful!
 
 ./main
 ${generateCodeAnalysis(code, 'C++')}
 
-✅ Program executed successfully!
-⚡ Runtime: ${Math.random() * 50 + 20}ms
-🚀 Performance: BLAZING FAST! ⚡
-🔧 Optimization level: O3 applied`,
+Program executed successfully!
+Runtime: ${Math.random() * 50 + 20}ms
+Performance: BLAZING FAST!
+Optimization level: O3 applied`,
 
-      'html': () => `🌐 HTML5 Document Parser
-⏰ Parsed at ${timestamp}
-📄 Processing ${codeLines} lines of HTML...
+      'html': () => `HTML5 Document Parser
+Parsed at ${timestamp}
+Processing ${codeLines} lines of HTML...
 
 ${generateWebAnalysis(code, 'HTML')}
 
-✅ HTML rendered successfully!
-🎨 DOM elements: ${Math.floor(Math.random() * 20 + 5)} created
-📱 Responsive: ${Math.random() > 0.5 ? 'Yes' : 'Needs improvement'}
-♿ Accessibility score: ${Math.floor(Math.random() * 30 + 70)}/100
-🌟 SEO score: ${Math.floor(Math.random() * 40 + 60)}/100`,
+HTML rendered successfully!
+DOM elements: ${Math.floor(Math.random() * 20 + 5)} created
+Responsive: ${Math.random() > 0.5 ? 'Yes' : 'Needs improvement'}
+Accessibility score: ${Math.floor(Math.random() * 30 + 70)}/100
+SEO score: ${Math.floor(Math.random() * 40 + 60)}/100`,
 
-      'css': () => `🎨 CSS3 Style Engine
-⏰ Compiled at ${timestamp}
-🎯 Processing ${codeLines} lines of styles...
+      'css': () => `CSS3 Style Engine
+Compiled at ${timestamp}
+Processing ${codeLines} lines of styles...
 
 ${generateWebAnalysis(code, 'CSS')}
 
-✅ Styles applied successfully!
-🎨 Visual rendering complete
-📱 Responsive breakpoints: ${Math.floor(Math.random() * 5 + 2)} detected
-✨ Animation performance: Optimized
-🔧 Suggestions: ${getOptimizationTips('css')}`,
+Styles applied successfully!
+Visual rendering complete
+Responsive breakpoints: ${Math.floor(Math.random() * 5 + 2)} detected
+Animation performance: Optimized
+Suggestions: ${getOptimizationTips('css')}`,
     };
 
     const generator = baseOutputs[lang.toLowerCase()];
@@ -339,7 +290,7 @@ ${generateWebAnalysis(code, 'CSS')}
     const variables = (code.match(/var |let |const |int |string |float /g) || []).length;
     const comments = (code.match(/\/\/|\/\*|\#|"""/g) || []).length;
     
-    return `📊 Code Analysis:
+    return `Code Analysis:
    • Functions/Methods: ${functions}
    • Variables declared: ${variables}
    • Comments: ${comments}
@@ -351,7 +302,7 @@ ${generateWebAnalysis(code, 'CSS')}
     if (type === 'HTML') {
       const tags = (code.match(/<[^>]+>/g) || []).length;
       const semanticTags = (code.match(/<(header|nav|main|section|article|aside|footer)/g) || []).length;
-      return `📊 HTML Analysis:
+      return `HTML Analysis:
    • Total tags: ${tags}
    • Semantic elements: ${semanticTags}
    • Images: ${(code.match(/<img/g) || []).length}
@@ -360,7 +311,7 @@ ${generateWebAnalysis(code, 'CSS')}
     } else {
       const selectors = (code.match(/[.#][\w-]+|[\w-]+\s*{/g) || []).length;
       const properties = (code.match(/[\w-]+\s*:/g) || []).length;
-      return `📊 CSS Analysis:
+      return `CSS Analysis:
    • Selectors: ${selectors}
    • Properties: ${properties}
    • Media queries: ${(code.match(/@media/g) || []).length}
@@ -381,18 +332,18 @@ ${generateWebAnalysis(code, 'CSS')}
   };
 
   const generateGenericOutput = (lang: string, code: string, timestamp: string, codeLines: number, complexity: number): string => {
-    return `🚀 ${langInfo.name} Runtime Environment
-⏰ Execution started at ${timestamp}
-📁 Processing ${codeLines} lines of ${langInfo.name} code...
-🧠 Complexity analysis: ${complexity}/10
+    return `${langInfo.name} Runtime Environment
+Execution started at ${timestamp}
+Processing ${codeLines} lines of ${langInfo.name} code...
+Complexity analysis: ${complexity}/10
 
 ${generateCodeAnalysis(code, langInfo.name)}
 
-✅ Code executed successfully!
-⚡ Runtime: ${Math.random() * 200 + 100}ms
-💾 Memory usage: ${Math.floor(Math.random() * 15 + 5)}MB
-🎯 ${langInfo.name} execution completed!
-🔧 Optimization tips: ${getOptimizationTips(lang)}`;
+Code executed successfully!
+Runtime: ${Math.random() * 200 + 100}ms
+Memory usage: ${Math.floor(Math.random() * 15 + 5)}MB
+${langInfo.name} execution completed!
+Optimization tips: ${getOptimizationTips(lang)}`;
   };
 
   const downloadCode = () => {
@@ -407,7 +358,7 @@ ${generateCodeAnalysis(code, langInfo.name)}
     URL.revokeObjectURL(url);
     
     toast({
-      title: "💾 Code downloaded",
+      title: "Code downloaded",
       description: `File saved as code.${getFileExtension(language)}`
     });
   };
@@ -421,9 +372,7 @@ ${generateCodeAnalysis(code, langInfo.name)}
       jsx: 'jsx', tsx: 'tsx', vue: 'vue', svelte: 'svelte',
       json: 'json', xml: 'xml', yaml: 'yml', sql: 'sql',
       markdown: 'md', md: 'md', bash: 'sh', powershell: 'ps1',
-      dart: 'dart', scala: 'scala', haskell: 'hs', elixir: 'ex',
-      clojure: 'clj', r: 'r', matlab: 'm', julia: 'jl',
-      solidity: 'sol', vyper: 'vy', lua: 'lua'
+      dart: 'dart', scala: 'scala', r: 'r', matlab: 'm', julia: 'jl'
     };
     return extensions[lang] || 'txt';
   };
@@ -586,69 +535,11 @@ ${generateCodeAnalysis(code, langInfo.name)}
           />
         </div>
       );
-    } else if (language === 'javascript' || language === 'jsx' || language === 'tsx') {
-      const htmlWithJS = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>JavaScript Preview</title>
-          <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-          <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-          <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-          <style>
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-              margin: 0; 
-              padding: 20px; 
-              background: #f5f5f5;
-            }
-            #root { 
-              max-width: 800px; 
-              margin: 0 auto; 
-              background: white;
-              padding: 20px;
-              border-radius: 8px;
-              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-          </style>
-        </head>
-        <body>
-          <div id="root">Loading JavaScript...</div>
-          <script type="text/babel">
-            try {
-              ${code}
-            } catch (error) {
-              document.getElementById('root').innerHTML = '<div style="color: red; padding: 20px;"><h3>JavaScript Error:</h3><pre>' + error.message + '</pre></div>';
-            }
-          </script>
-        </body>
-        </html>
-      `;
-      return (
-        <div className={`${getPreviewDimensions()} mx-auto border border-border/20 rounded-xl overflow-hidden bg-white shadow-xl`}>
-          <div className="bg-gray-100 px-4 py-3 border-b border-border/20 flex items-center gap-3">
-            <div className="flex gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            </div>
-            <div className="text-sm text-gray-600 font-mono">JavaScript Preview</div>
-          </div>
-          <iframe
-            srcDoc={htmlWithJS}
-            className="w-full h-full border-0"
-            title="JavaScript Preview"
-            sandbox="allow-scripts allow-same-origin"
-          />
-        </div>
-      );
     } else {
       return (
         <div className="p-12 text-center text-muted-foreground h-[600px] flex items-center justify-center border border-border/20 rounded-xl bg-muted/5">
           <div className="max-w-md">
-            <div className="text-8xl mb-6">{langInfo.icon}</div>
+            <div className="text-6xl mb-6">{getLanguageIcon(language)}</div>
             <h3 className="text-2xl font-bold mb-3 text-foreground">{langInfo.name}</h3>
             <p className="text-lg mb-4">{langInfo.description}</p>
             <p className="text-sm mb-6">Live preview is not available for {langInfo.name} files</p>
@@ -663,13 +554,26 @@ ${generateCodeAnalysis(code, langInfo.name)}
     }
   };
 
+  const getLanguageIcon = (lang: string): string => {
+    const icons: Record<string, string> = {
+      javascript: '⚡', typescript: '📘', python: '🐍', java: '☕',
+      cpp: '⚙️', c: '🔧', csharp: '🔷', go: '🐹', rust: '🦀',
+      php: '🐘', ruby: '💎', swift: '🦉', kotlin: '🎯',
+      html: '🌐', css: '🎨', scss: '💎', sass: '💎',
+      jsx: '⚛️', tsx: '⚛️', vue: '💚', svelte: '🔥',
+      json: '📋', xml: '📄', yaml: '📝', sql: '🗄️',
+      markdown: '📝', bash: '💻', powershell: '⚡'
+    };
+    return icons[lang] || '📄';
+  };
+
   return (
     <Card className={`w-full shadow-2xl border border-border/30 ${isFullscreen ? 'fixed inset-4 z-50' : ''} bg-card overflow-hidden`}>
-      {/* Enhanced Header with more professional design */}
+      {/* Professional Header */}
       <div className="flex items-center justify-between p-4 border-b border-border/20 bg-gradient-to-r from-muted/20 via-muted/10 to-transparent">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="text-3xl">{langInfo.icon}</div>
+            <div className="text-2xl">{getLanguageIcon(language)}</div>
             <div className="flex items-center gap-2">
               <Code2 className="w-5 h-5 text-primary" />
               <FileCode className="w-4 h-4 text-muted-foreground" />
@@ -689,8 +593,8 @@ ${generateCodeAnalysis(code, langInfo.name)}
           </div>
           <div className="flex gap-2">
             <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">{langInfo.category}</Badge>
-            {langInfo.executable && <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">⚡ Executable</Badge>}
-            {langInfo.preview && <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">👁️ Preview</Badge>}
+            {langInfo.executable && <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Executable</Badge>}
+            {langInfo.preview && <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">Preview</Badge>}
           </div>
         </div>
         
@@ -866,7 +770,7 @@ ${generateCodeAnalysis(code, langInfo.name)}
             {langInfo.preview ? renderPreview() : (
               <div className="h-full flex items-center justify-center text-center text-muted-foreground">
                 <div>
-                  <div className="text-8xl mb-6">{langInfo.icon}</div>
+                  <div className="text-6xl mb-6">{getLanguageIcon(language)}</div>
                   <h3 className="text-2xl font-bold mb-3 text-foreground">{langInfo.name}</h3>
                   <p className="text-lg mb-4">{langInfo.description}</p>
                   <p className="text-sm">Preview is not supported for {langInfo.name} files</p>
@@ -883,7 +787,7 @@ ${generateCodeAnalysis(code, langInfo.name)}
                 <div className="flex items-center gap-4 text-yellow-400">
                   <RefreshCw className="w-6 h-6 animate-spin" />
                   <div>
-                    <div className="text-xl font-bold mb-2">🚀 Executing {langInfo.name} code...</div>
+                    <div className="text-xl font-bold mb-2">Executing {langInfo.name} code...</div>
                     <div className="text-sm opacity-80 mb-4">Please wait while your code is being processed and analyzed</div>
                     <div className="flex items-center gap-2 text-xs">
                       <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
@@ -895,13 +799,13 @@ ${generateCodeAnalysis(code, langInfo.name)}
                 <pre className="whitespace-pre-wrap leading-relaxed">{output}</pre>
               ) : (
                 <div className="text-center text-gray-500 py-16">
-                  <div className="text-8xl mb-6">{langInfo.icon}</div>
+                  <div className="text-6xl mb-6">{getLanguageIcon(language)}</div>
                   <h3 className="text-2xl font-bold mb-3 text-white">Ready to Execute</h3>
                   <p className="text-lg mb-4">Click "Execute" to run the {langInfo.name} code</p>
                   <div className="flex gap-3 justify-center mb-6">
                     <Badge variant="outline" className="text-xs bg-gray-800 text-gray-300 border-gray-600">{langInfo.category}</Badge>
                     <Badge variant="outline" className="text-xs bg-green-900 text-green-300 border-green-600">
-                      {langInfo.executable ? '⚡ Executable' : '📄 Static'}
+                      {langInfo.executable ? 'Executable' : 'Static'}
                     </Badge>
                   </div>
                   <p className="text-xs text-gray-600 max-w-md mx-auto">

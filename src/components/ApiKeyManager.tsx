@@ -171,22 +171,22 @@ export function ApiKeyManager() {
         ))}
         
         <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <h4 className="text-sm font-medium mb-2">🔒 Privacy & Security</h4>
+          <h4 className="text-sm font-medium mb-2">Privacy & Security</h4>
           <ul className="text-xs text-muted-foreground space-y-1">
-            <li>• API keys are stored locally in your browser only</li>
-            <li>• Keys are never sent to Cosmic AI servers</li>
-            <li>• Direct connections are made to AI providers</li>
-            <li>• You can remove keys anytime</li>
+            <li>API keys are stored locally in your browser only</li>
+            <li>Keys are never sent to Cosmic AI servers</li>
+            <li>Direct connections are made to AI providers</li>
+            <li>You can remove keys anytime</li>
           </ul>
         </div>
         
         <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-          <h4 className="text-sm font-medium mb-2">📚 How to get API keys:</h4>
+          <h4 className="text-sm font-medium mb-2">How to get API keys:</h4>
           <ul className="text-xs space-y-1">
-            <li>• <strong>OpenAI:</strong> platform.openai.com/api-keys</li>
-            <li>• <strong>Anthropic:</strong> console.anthropic.com/settings/keys</li>
-            <li>• <strong>Google:</strong> aistudio.google.com/app/apikey</li>
-            <li>• <strong>DeepSeek:</strong> platform.deepseek.com/api_keys</li>
+            <li><strong>OpenAI:</strong> platform.openai.com/api-keys</li>
+            <li><strong>Anthropic:</strong> console.anthropic.com/settings/keys</li>
+            <li><strong>Google:</strong> aistudio.google.com/app/apikey</li>
+            <li><strong>DeepSeek:</strong> platform.deepseek.com/api_keys</li>
           </ul>
         </div>
       </CardContent>
