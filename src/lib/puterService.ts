@@ -200,7 +200,7 @@ export class PuterService {
     const defaultOptions: PuterAIOptions = {
       model: 'deepseek-v3',
       max_tokens: 2000,
-      temperature: 0.1,
+      temperature: 0.7,
       memory: true,
       stream: false,
       ...options
@@ -404,12 +404,13 @@ Please try again or contact support if the issue persists.`;
     if (!await this.isAvailable()) {
       return 'File processing service not available. Please ensure the Puter SDK is loaded and try again.';
     }
-    
+
     const defaultOptions: PuterAIOptions = {
       model: 'deepseek-v3',
       max_tokens: 2500,
       temperature: 0.7,
       memory: true,
+      stream:true,
       ...options
     };
     
