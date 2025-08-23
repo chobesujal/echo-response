@@ -16,20 +16,26 @@ interface ChatMessageProps {
 }
 
 const modelDisplayNames: Record<string, string> = {
-  'gpt-4o': 'GPT-4o',
-  'gpt-4o-mini': 'GPT-4o Mini',
-  'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+  'deepseek-v3': 'DeepSeek V3',
+  'deepseek-r1': 'DeepSeek R1',
   'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
   'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
   'claude-3-opus-20240229': 'Claude 3 Opus',
+  'gpt-4o': 'GPT-4o',
+  'gpt-4o-mini': 'GPT-4o Mini',
+  'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+  'o1-preview': 'o1-preview',
+  'o1-mini': 'o1-mini',
+  'chatgpt-4o-latest': 'ChatGPT-4o',
   'gemini-1.5-flash': 'Gemini 1.5 Flash',
   'gemini-1.5-pro': 'Gemini 1.5 Pro',
   'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
-  'deepseek-r1': 'DeepSeek R1',
-  'deepseek-v3': 'DeepSeek V3',
   'llama-3.1-405b': 'Llama 3.1 405B',
   'llama-3.1-70b': 'Llama 3.1 70B',
-  'llama-3.1-8b': 'Llama 3.1 8B'
+  'llama-3.1-8b': 'Llama 3.1 8B',
+  'mistral-large': 'Mistral Large',
+  'mixtral-8x7b': 'Mixtral 8x7B',
+  'codellama-34b': 'CodeLlama 34B'
 };
 
 export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming }: ChatMessageProps) => {

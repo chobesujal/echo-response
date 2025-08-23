@@ -7,11 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Trash2, RefreshCw, Copy, Download, Share, Code, Brain, Search, Zap, Menu, X, ChevronDown, Sparkles, MessageSquare, Plus } from "lucide-react";
+import { Trash2, RefreshCw, Plus, ChevronDown, Sparkles, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { puterService } from "@/lib/puterService";
-import { Separator } from "@/components/ui/separator";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface Message {
@@ -36,14 +34,15 @@ interface ChatSession {
 type Model = 
   | 'deepseek-v3'
   | 'deepseek-r1'
+  | 'claude-3-5-sonnet-20241022'
+  | 'claude-3-5-haiku-20241022'
+  | 'claude-3-opus-20240229'
   | 'gpt-4o' 
   | 'gpt-4o-mini' 
   | 'gpt-3.5-turbo'
   | 'o1-preview'
   | 'o1-mini'
-  | 'claude-3-5-sonnet-20241022'
-  | 'claude-3-5-haiku-20241022'
-  | 'claude-3-opus-20240229'
+  | 'chatgpt-4o-latest'
   | 'gemini-1.5-flash'
   | 'gemini-1.5-pro'
   | 'gemini-2.0-flash-exp'
@@ -57,14 +56,15 @@ type Model =
 const modelDisplayNames: Record<Model, string> = {
   'deepseek-v3': 'DeepSeek V3',
   'deepseek-r1': 'DeepSeek R1',
+  'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
+  'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
+  'claude-3-opus-20240229': 'Claude 3 Opus',
   'gpt-4o': 'GPT-4o',
   'gpt-4o-mini': 'GPT-4o Mini',
   'gpt-3.5-turbo': 'GPT-3.5 Turbo',
   'o1-preview': 'o1-preview',
   'o1-mini': 'o1-mini',
-  'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-  'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
-  'claude-3-opus-20240229': 'Claude 3 Opus',
+  'chatgpt-4o-latest': 'ChatGPT-4o',
   'gemini-1.5-flash': 'Gemini 1.5 Flash',
   'gemini-1.5-pro': 'Gemini 1.5 Pro',
   'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
@@ -76,10 +76,11 @@ const modelDisplayNames: Record<Model, string> = {
   'codellama-34b': 'CodeLlama 34B'
 };
 
+// Fixed model categories with Claude second as requested
 const modelCategories = {
   'DeepSeek': ['deepseek-v3', 'deepseek-r1'],
-  'OpenAI': ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o1-preview', 'o1-mini'],
   'Anthropic': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+  'OpenAI': ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o1-preview', 'o1-mini', 'chatgpt-4o-latest'],
   'Google': ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'],
   'Meta': ['llama-3.1-405b', 'llama-3.1-70b', 'llama-3.1-8b'],
   'Other': ['mistral-large', 'mixtral-8x7b', 'codellama-34b']
@@ -104,7 +105,7 @@ export const EnhancedChatContainer = ({
   const [isTyping, setIsTyping] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [sessionId] = useState(() => currentChatId || `session-${Date.now()}`);
+  const [sessionId, setSessionId] = useState(() => currentChatId || `session-${Date.now()}`);
   const [streamingText, setStreamingText] = useState("");
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [modelStatus, setModelStatus] = useState<Record<string, 'working' | 'testing' | 'error'>>({});
@@ -112,6 +113,7 @@ export const EnhancedChatContainer = ({
   const [sandboxCode, setSandboxCode] = useState('');
   const [sandboxLanguage, setSandboxLanguage] = useState('javascript');
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [regeneratingMessageId, setRegeneratingMessageId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -193,6 +195,7 @@ export const EnhancedChatContainer = ({
           }));
           setMessages(messagesWithDates);
           setShowSuggestions(messagesWithDates.length <= 1);
+          setSessionId(chatId);
         }
       }
     } catch (error) {
@@ -208,7 +211,7 @@ export const EnhancedChatContainer = ({
   const saveChat = (updatedMessages: Message[]) => {
     try {
       const chatSession: ChatSession = {
-        id: currentChatId || sessionId,
+        id: sessionId,
         title: generateChatTitle(updatedMessages),
         messages: updatedMessages,
         timestamp: new Date(),
@@ -329,16 +332,6 @@ export const EnhancedChatContainer = ({
       }
     }
 
-    // Add mode context with model-specific prompts
-    let systemPrompt = '';
-    if (mode === 'thinking') {
-      systemPrompt = `You are ${modelDisplayNames[selectedModel]}. Think step by step and show your reasoning process clearly. Explain your thought process and analysis. `;
-    } else if (mode === 'search') {
-      systemPrompt = `You are ${modelDisplayNames[selectedModel]}. Search for relevant information and provide comprehensive, well-researched answers. `;
-    } else {
-      systemPrompt = `You are ${modelDisplayNames[selectedModel]}. Respond as yourself with your unique capabilities and personality. `;
-    }
-
     // Detect code in user message
     const codeDetection = detectCodeInMessage(text);
 
@@ -377,7 +370,7 @@ export const EnhancedChatContainer = ({
       if (processedFiles.length > 0) {
         const content = [{
           type: 'text',
-          text: systemPrompt + messageText
+          text: messageText
         }, ...processedFiles];
         responseText = await puterService.chatWithFiles(content, {
           model: selectedModel,
@@ -386,7 +379,7 @@ export const EnhancedChatContainer = ({
           memory: true
         }, sessionId);
       } else {
-        responseText = await puterService.chat(systemPrompt + messageText, {
+        responseText = await puterService.chat(messageText, {
           model: selectedModel,
           max_tokens: 1500,
           temperature: selectedModel.includes('r1') ? 0.1 : mode === 'thinking' ? 0.3 : 0.7,
@@ -499,80 +492,60 @@ export const EnhancedChatContainer = ({
     puterService.clearMemory(sessionId, selectedModel);
   };
 
-  const regenerateLastResponse = async () => {
-    const lastUserMessage = [...messages].reverse().find(m => m.isUser);
-    if (lastUserMessage && !isStreaming) {
-      let lastUserIndex = -1;
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].isUser) {
-          lastUserIndex = i;
-          break;
-        }
+  const regenerateResponse = async (messageId: string) => {
+    if (isStreaming || regeneratingMessageId) return;
+    
+    setRegeneratingMessageId(messageId);
+    
+    // Find the message to regenerate and the user message before it
+    const messageIndex = messages.findIndex(m => m.id === messageId);
+    if (messageIndex === -1) return;
+    
+    // Find the last user message before this AI message
+    let lastUserMessage = null;
+    for (let i = messageIndex - 1; i >= 0; i--) {
+      if (messages[i].isUser) {
+        lastUserMessage = messages[i];
+        break;
       }
-      const messagesUpToLastUser = messages.slice(0, lastUserIndex + 1);
-      setMessages(messagesUpToLastUser);
+    }
+    
+    if (!lastUserMessage) return;
+    
+    // Remove all messages after the user message
+    const messagesUpToUser = messages.slice(0, messageIndex);
+    setMessages(messagesUpToUser);
+    
+    try {
+      // Regenerate the response
       await handleSendMessage(lastUserMessage.text, [], 'normal');
-    } else if (isStreaming) {
+    } catch (error) {
+      console.error('Error regenerating response:', error);
       toast({
-        title: "Please wait",
-        description: "Please wait for the current response to complete before regenerating."
+        title: "Regeneration Failed",
+        description: "Failed to regenerate response. Please try again.",
+        variant: "destructive"
       });
+    } finally {
+      setRegeneratingMessageId(null);
     }
   };
 
-  const copyChat = () => {
-    const chatText = messages.filter(m => m.id !== 'welcome').map(m => 
-      `${m.isUser ? 'You' : `AI (${modelDisplayNames[m.model as Model] || m.model})`}: ${m.text}`
-    ).join('\n\n');
-    navigator.clipboard.writeText(chatText);
+  const handleNewConversation = () => {
+    // Generate new session ID
+    const newSessionId = `session-${Date.now()}`;
+    setSessionId(newSessionId);
+    
+    // Clear current chat
+    clearChat();
+    
+    // Clear memory for new session
+    puterService.clearMemory(newSessionId);
+    
     toast({
-      title: "Chat copied",
-      description: "Chat history has been copied to clipboard."
+      title: "New Conversation",
+      description: "Started a fresh conversation with clean memory."
     });
-  };
-
-  const exportChat = () => {
-    const chatData = {
-      title: generateChatTitle(messages),
-      timestamp: new Date(),
-      model: selectedModel,
-      messages: messages.filter(m => m.id !== 'welcome')
-    };
-    const dataStr = JSON.stringify(chatData, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    const exportFileDefaultName = `cosmic-ai-chat-${Date.now()}.json`;
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-    toast({
-      title: "Chat exported",
-      description: "Chat has been downloaded as JSON file."
-    });
-  };
-
-  const shareChat = async () => {
-    const chatText = messages.filter(m => m.id !== 'welcome').map(m => 
-      `${m.isUser ? 'You' : 'AI'}: ${m.text}`
-    ).join('\n\n');
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Cosmic AI Chat Conversation',
-          text: chatText
-        });
-      } catch (error) {
-        copyChat();
-      }
-    } else {
-      copyChat();
-    }
-  };
-
-  const openInSandbox = (code: string, language: string) => {
-    setSandboxCode(code);
-    setSandboxLanguage(language);
-    setShowSandbox(true);
   };
 
   const getModelStatusBadge = (model: string) => {
@@ -600,25 +573,12 @@ export const EnhancedChatContainer = ({
     handleSendMessage(suggestion, [], 'normal');
   };
 
-  const handleNewConversation = () => {
-    clearChat();
-    // Generate new session ID
-    const newSessionId = `session-${Date.now()}`;
-    // Clear memory for new session
-    puterService.clearMemory(newSessionId);
-    
-    toast({
-      title: "New Conversation",
-      description: "Started a fresh conversation with clean memory."
-    });
-  };
-
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header redesigned to match reference image */}
+      {/* Fixed Header - Single New Conversation Button */}
       <div className="flex items-center justify-between p-4 bg-background border-b border-border/20">
         <div className="flex items-center gap-4">
-          {/* New Conversation Button */}
+          {/* Single New Conversation Button */}
           <Button 
             variant="outline" 
             size="sm" 
@@ -663,16 +623,6 @@ export const EnhancedChatContainer = ({
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={regenerateLastResponse} 
-            disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
             onClick={clearChat}
             disabled={isStreaming}
             className="text-muted-foreground hover:text-foreground"
@@ -703,15 +653,38 @@ export const EnhancedChatContainer = ({
                         timestamp={message.timestamp} 
                         model={message.model} 
                       />
+                      {/* Regenerate button for AI messages */}
+                      {!message.isUser && message.id !== 'welcome' && (
+                        <div className="flex justify-start mt-2 ml-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => regenerateResponse(message.id)}
+                            disabled={isStreaming || regeneratingMessageId === message.id}
+                            className="gap-2 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            {regeneratingMessageId === message.id ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-3 h-3" />
+                            )}
+                            {regeneratingMessageId === message.id ? 'Regenerating...' : 'Regenerate response'}
+                          </Button>
+                        </div>
+                      )}
                       {message.hasCode && message.codeContent && (
-                        <div className="mt-4">
+                        <div className="mt-4 ml-4">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openInSandbox(message.codeContent!, message.codeLanguage!)}
+                            onClick={() => {
+                              setSandboxCode(message.codeContent!);
+                              setSandboxLanguage(message.codeLanguage!);
+                              setShowSandbox(true);
+                            }}
                             className="gap-2"
                           >
-                            <Code className="w-4 h-4" />
+                            <Code2 className="w-4 h-4" />
                             Open in Sandbox
                           </Button>
                         </div>

@@ -51,15 +51,15 @@ export class PuterService {
   }
   
   async testAvailableModels(): Promise<void> {
-    // Updated model list based on Puter documentation
+    // Updated model list based on Puter documentation and current availability
     const testModels = [
-      // DeepSeek Models (Working)
+      // DeepSeek Models (Working - Fixed structure)
       'deepseek-v3', 'deepseek-r1',
       
-      // OpenAI Models (Current)
-      'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o1-preview', 'o1-mini',
+      // OpenAI Models (Current - Fixed ChatGPT context)
+      'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o1-preview', 'o1-mini', 'chatgpt-4o-latest',
       
-      // Anthropic Models (Current)
+      // Anthropic Models (Current - Moved to second position)
       'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229',
       
       // Google Models (Current)
@@ -222,6 +222,12 @@ export class PuterService {
         console.log(`Using ${conversationMessages.length} messages from memory for context`);
       }
       
+      // Add model-specific system prompt to ensure proper identity
+      const systemPrompt = this.getModelSystemPrompt(defaultOptions.model!);
+      if (systemPrompt && conversationMessages.length === 0) {
+        conversationMessages.push({ role: 'system', content: systemPrompt });
+      }
+      
       // Add current message
       conversationMessages.push({ role: 'user', content: message });
       
@@ -241,14 +247,15 @@ export class PuterService {
       } catch (error1) {
         console.warn('Conversation method failed:', error1.message);
         
-        // Method 2: Simple message with model
+        // Method 2: Simple message with model and system prompt
         try {
-          response = await (window as any).puter.ai.chat(message, {
+          const messageWithPrompt = systemPrompt ? `${systemPrompt}\n\nUser: ${message}` : message;
+          response = await (window as any).puter.ai.chat(messageWithPrompt, {
             model: puterModel,
             max_tokens: defaultOptions.max_tokens,
             temperature: defaultOptions.temperature
           });
-          console.log('Simple method successful');
+          console.log('Simple method with prompt successful');
         } catch (error2) {
           console.warn('Simple method failed:', error2.message);
           
@@ -285,6 +292,31 @@ export class PuterService {
       console.error('Puter AI Error:', error);
       return this.getEnhancedFallbackResponse(message, defaultOptions.model, error);
     }
+  }
+
+  // Fixed model system prompts to ensure proper identity
+  private getModelSystemPrompt(model: string): string {
+    const prompts: Record<string, string> = {
+      'deepseek-v3': 'You are DeepSeek V3, an advanced AI model created by DeepSeek. You are known for your reasoning capabilities and technical expertise. Always identify yourself as DeepSeek V3 when asked about your identity.',
+      'deepseek-r1': 'You are DeepSeek R1, a reasoning-focused AI model created by DeepSeek. You excel at step-by-step thinking and logical analysis. Always identify yourself as DeepSeek R1 when asked about your identity.',
+      'gpt-4o': 'You are GPT-4o, an advanced AI model created by OpenAI. You are multimodal and capable of processing text and images. Always identify yourself as GPT-4o when asked about your identity.',
+      'gpt-4o-mini': 'You are GPT-4o Mini, a fast and efficient AI model created by OpenAI. You provide quick, accurate responses. Always identify yourself as GPT-4o Mini when asked about your identity.',
+      'gpt-3.5-turbo': 'You are GPT-3.5 Turbo, an AI model created by OpenAI. You are optimized for conversational AI. Always identify yourself as GPT-3.5 Turbo when asked about your identity.',
+      'o1-preview': 'You are o1-preview, an advanced reasoning AI model created by OpenAI. You excel at complex problem-solving and step-by-step analysis. Always identify yourself as o1-preview when asked about your identity.',
+      'o1-mini': 'You are o1-mini, a reasoning-focused AI model created by OpenAI. You provide thoughtful, analytical responses. Always identify yourself as o1-mini when asked about your identity.',
+      'chatgpt-4o-latest': 'You are ChatGPT-4o, the latest version of ChatGPT created by OpenAI. You are conversational and helpful. Always identify yourself as ChatGPT-4o when asked about your identity.',
+      'claude-3-5-sonnet-20241022': 'You are Claude 3.5 Sonnet, an AI assistant created by Anthropic. You are helpful, harmless, and honest. Always identify yourself as Claude 3.5 Sonnet when asked about your identity.',
+      'claude-3-5-haiku-20241022': 'You are Claude 3.5 Haiku, a fast AI assistant created by Anthropic. You provide concise, helpful responses. Always identify yourself as Claude 3.5 Haiku when asked about your identity.',
+      'claude-3-opus-20240229': 'You are Claude 3 Opus, a powerful AI assistant created by Anthropic. You excel at complex tasks and reasoning. Always identify yourself as Claude 3 Opus when asked about your identity.',
+      'gemini-1.5-flash': 'You are Gemini 1.5 Flash, an AI model created by Google. You are fast and efficient at various tasks. Always identify yourself as Gemini 1.5 Flash when asked about your identity.',
+      'gemini-1.5-pro': 'You are Gemini 1.5 Pro, an advanced AI model created by Google. You excel at complex reasoning and multimodal tasks. Always identify yourself as Gemini 1.5 Pro when asked about your identity.',
+      'gemini-2.0-flash-exp': 'You are Gemini 2.0 Flash, an experimental AI model created by Google. You represent the latest in AI technology. Always identify yourself as Gemini 2.0 Flash when asked about your identity.',
+      'llama-3.1-405b': 'You are Llama 3.1 405B, a large language model created by Meta. You are one of the most capable open-source models. Always identify yourself as Llama 3.1 405B when asked about your identity.',
+      'llama-3.1-70b': 'You are Llama 3.1 70B, a language model created by Meta. You provide balanced performance and capability. Always identify yourself as Llama 3.1 70B when asked about your identity.',
+      'llama-3.1-8b': 'You are Llama 3.1 8B, an efficient language model created by Meta. You are optimized for speed and efficiency. Always identify yourself as Llama 3.1 8B when asked about your identity.'
+    };
+    
+    return prompts[model] || '';
   }
 
   // Enhanced image-to-text with proper error handling
@@ -388,6 +420,12 @@ Please try again or contact support if the issue persists.`;
         const memory = this.getMemory(sessionId, defaultOptions.model);
         contextMessages = memory.slice(-8).map(m => ({ role: m.role, content: m.content }));
         console.log(`Using ${contextMessages.length} messages from memory for file chat`);
+      }
+      
+      // Add model-specific system prompt
+      const systemPrompt = this.getModelSystemPrompt(defaultOptions.model!);
+      if (systemPrompt && contextMessages.length === 0) {
+        contextMessages.push({ role: 'system', content: systemPrompt });
       }
       
       const messages = [
@@ -551,17 +589,18 @@ Please try again in a few moments - I should be back online soon!`,
       'deepseek-v3',
       'deepseek-r1',
       
-      // OpenAI Models (Current)
+      // Anthropic Models (Second position as requested)
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229',
+      
+      // OpenAI Models (Current - Fixed ChatGPT context)
       'gpt-4o',
       'gpt-4o-mini',
       'gpt-3.5-turbo',
       'o1-preview',
       'o1-mini',
-      
-      // Anthropic Models (Current)
-      'claude-3-5-sonnet-20241022',
-      'claude-3-5-haiku-20241022',
-      'claude-3-opus-20240229',
+      'chatgpt-4o-latest',
       
       // Google Models (Current)
       'gemini-1.5-flash',
@@ -586,17 +625,18 @@ Please try again in a few moments - I should be back online soon!`,
       'deepseek-r1': 'DeepSeek R1',
       'deepseek-v3': 'DeepSeek V3',
       
-      // OpenAI Models (Current)
+      // Anthropic Models (Second position)
+      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
+      'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
+      'claude-3-opus-20240229': 'Claude 3 Opus',
+      
+      // OpenAI Models (Current - Fixed ChatGPT context)
       'gpt-4o': 'GPT-4o',
       'gpt-4o-mini': 'GPT-4o Mini',
       'gpt-3.5-turbo': 'GPT-3.5 Turbo',
       'o1-preview': 'o1-preview',
       'o1-mini': 'o1-mini',
-      
-      // Anthropic Models (Current)
-      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-      'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
-      'claude-3-opus-20240229': 'Claude 3 Opus',
+      'chatgpt-4o-latest': 'ChatGPT-4o',
       
       // Google Models (Current)
       'gemini-1.5-flash': 'Gemini 1.5 Flash',
