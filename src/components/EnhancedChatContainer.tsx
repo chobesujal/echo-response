@@ -1,15 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "./ChatMessage";
 import { EnhancedChatInput } from "./EnhancedChatInput";
 import { TypingIndicator } from "./TypingIndicator";
+import { SandboxEnvironment } from "./SandboxEnvironment";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, RefreshCw, Copy, Download, Share, Sparkles, Settings, Plus, Brain, Search, Zap } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Trash2, RefreshCw, Copy, Download, Share, Code, Brain, Search, Zap, Menu, X, ChevronDown, Sparkles, MessageSquare, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { puterService } from "@/lib/puterService";
-import { VoiceSettings } from "./VoiceSettings";
+import { Separator } from "@/components/ui/separator";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface Message {
   id: string;
@@ -17,6 +20,9 @@ interface Message {
   isUser: boolean;
   timestamp: Date;
   model?: string;
+  hasCode?: boolean;
+  codeLanguage?: string;
+  codeContent?: string;
 }
 
 interface ChatSession {
@@ -32,8 +38,9 @@ type Model =
   | 'deepseek-r1'
   | 'gpt-4o' 
   | 'gpt-4o-mini' 
-  | 'gpt-4-turbo' 
   | 'gpt-3.5-turbo'
+  | 'o1-preview'
+  | 'o1-mini'
   | 'claude-3-5-sonnet-20241022'
   | 'claude-3-5-haiku-20241022'
   | 'claude-3-opus-20240229'
@@ -52,8 +59,9 @@ const modelDisplayNames: Record<Model, string> = {
   'deepseek-r1': 'DeepSeek R1',
   'gpt-4o': 'GPT-4o',
   'gpt-4o-mini': 'GPT-4o Mini',
-  'gpt-4-turbo': 'GPT-4 Turbo',
   'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+  'o1-preview': 'o1-preview',
+  'o1-mini': 'o1-mini',
   'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
   'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
   'claude-3-opus-20240229': 'Claude 3 Opus',
@@ -69,8 +77,8 @@ const modelDisplayNames: Record<Model, string> = {
 };
 
 const modelCategories = {
-  'DeepSeek (Recommended)': ['deepseek-v3', 'deepseek-r1'],
-  'OpenAI': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  'DeepSeek': ['deepseek-v3', 'deepseek-r1'],
+  'OpenAI': ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o1-preview', 'o1-mini'],
   'Anthropic': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
   'Google': ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'],
   'Meta': ['llama-3.1-405b', 'llama-3.1-70b', 'llama-3.1-8b'],
@@ -88,18 +96,22 @@ export const EnhancedChatContainer = ({
 }: EnhancedChatContainerProps) => {
   const [messages, setMessages] = useState<Message[]>([{
     id: "welcome",
-    text: "Hello! I'm **Cosmic AI**, your advanced AI assistant with access to multiple cutting-edge AI models including DeepSeek, GPT-4, Claude, Gemini, and more.\n\n🚀 **What I can help you with:**\n• **Coding & Development** - Write, debug, and explain code in 50+ languages\n• **Creative Writing** - Stories, articles, scripts, and more\n• **Analysis & Research** - Data analysis, research, and insights\n• **Problem Solving** - Step-by-step solutions and explanations\n• **Image Analysis** - Describe and analyze uploaded images\n• **File Processing** - Work with documents, code files, and more\n\n💡 **Choose your preferred AI model** from the dropdown above and let's start our conversation!",
+    text: "Hello! I'm Cosmic AI, your advanced AI assistant with access to multiple cutting-edge AI models.\n\nWhat I can help you with:\n• Coding & Development - Write, debug, and explain code in 50+ languages\n• Creative Writing - Stories, articles, scripts, and more\n• Analysis & Research - Data analysis, research, and insights\n• Problem Solving - Step-by-step solutions and explanations\n• Image Analysis - Describe and analyze uploaded images\n• File Processing - Work with documents, code files, and more\n\nChoose your preferred AI model from the Reasoning model dropdown and let's start our conversation!",
     isUser: false,
     timestamp: new Date(),
     model: 'system'
   }]);
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3'); // Default to DeepSeek V3
+  const [selectedModel, setSelectedModel] = useState<Model>('deepseek-v3');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [sessionId] = useState(() => `session-${Date.now()}`);
+  const [sessionId] = useState(() => currentChatId || `session-${Date.now()}`);
   const [streamingText, setStreamingText] = useState("");
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [modelStatus, setModelStatus] = useState<Record<string, 'working' | 'testing' | 'error'>>({});
+  const [showSandbox, setShowSandbox] = useState(false);
+  const [sandboxCode, setSandboxCode] = useState('');
+  const [sandboxLanguage, setSandboxLanguage] = useState('javascript');
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -107,45 +119,45 @@ export const EnhancedChatContainer = ({
   useEffect(() => {
     const initializePuter = async () => {
       try {
-        console.log('🚀 Initializing Puter service...');
+        console.log('Initializing Puter service...');
         const initialized = await puterService.initialize();
         if (initialized) {
-          console.log('✅ Puter service initialized successfully');
+          console.log('Puter service initialized successfully');
           toast({
-            title: "🚀 AI Service Ready",
+            title: "AI Service Ready",
             description: "All AI models are now available for use."
           });
           
-          // Test DeepSeek V3 specifically
-          try {
-            const testResponse = await puterService.chat('Hi', { model: 'deepseek-v3', max_tokens: 10 }, sessionId);
-            if (testResponse && testResponse.length > 0) {
-              console.log('✅ DeepSeek V3 is working properly');
-              setModelStatus(prev => ({ ...prev, 'deepseek-v3': 'working' }));
+          // Test all models
+          const models = puterService.getAvailableModels();
+          for (const model of models) {
+            try {
+              setModelStatus(prev => ({ ...prev, [model]: 'testing' }));
+              const isWorking = await puterService.testModel(model);
+              setModelStatus(prev => ({ ...prev, [model]: isWorking ? 'working' : 'error' }));
+            } catch (error) {
+              setModelStatus(prev => ({ ...prev, [model]: 'error' }));
             }
-          } catch (error) {
-            console.error('❌ DeepSeek V3 test failed:', error);
-            setModelStatus(prev => ({ ...prev, 'deepseek-v3': 'error' }));
           }
         } else {
-          console.error('❌ Failed to initialize Puter service');
+          console.error('Failed to initialize Puter service');
           toast({
-            title: "⚠️ Connection Issue",
+            title: "Connection Issue",
             description: "AI service initialization failed. Some features may not work.",
             variant: "destructive"
           });
         }
       } catch (error) {
-        console.error('❌ Failed to initialize Puter service:', error);
+        console.error('Failed to initialize Puter service:', error);
         toast({
-          title: "❌ Initialization Error",
+          title: "Initialization Error",
           description: "Failed to connect to AI services. Please refresh the page.",
           variant: "destructive"
         });
       }
     };
     initializePuter();
-  }, [toast, sessionId]);
+  }, [toast]);
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
@@ -180,6 +192,7 @@ export const EnhancedChatContainer = ({
             timestamp: new Date(msg.timestamp)
           }));
           setMessages(messagesWithDates);
+          setShowSuggestions(messagesWithDates.length <= 1);
         }
       }
     } catch (error) {
@@ -237,8 +250,26 @@ export const EnhancedChatContainer = ({
     return `Chat ${new Date().toLocaleString()}`;
   };
 
+  const detectCodeInMessage = (text: string): { hasCode: boolean; language?: string; code?: string } => {
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/;
+    const match = text.match(codeBlockRegex);
+    
+    if (match) {
+      return {
+        hasCode: true,
+        language: match[1] || 'text',
+        code: match[2]
+      };
+    }
+    
+    return { hasCode: false };
+  };
+
   const handleSendMessage = async (text: string, files?: File[], mode?: 'thinking' | 'search' | 'normal') => {
     if (!text.trim() && (!files || files.length === 0)) return;
+
+    // Hide suggestions after first message
+    setShowSuggestions(false);
 
     let messageText = text;
     let processedFiles: any[] = [];
@@ -298,19 +329,28 @@ export const EnhancedChatContainer = ({
       }
     }
 
-    // Add mode context
+    // Add mode context with model-specific prompts
+    let systemPrompt = '';
     if (mode === 'thinking') {
-      messageText = `[🧠 Thinking Mode] Please think step by step and show your reasoning process.\n\n${messageText}`;
+      systemPrompt = `You are ${modelDisplayNames[selectedModel]}. Think step by step and show your reasoning process clearly. Explain your thought process and analysis. `;
     } else if (mode === 'search') {
-      messageText = `[🔍 Search Mode] Please provide comprehensive, well-researched information.\n\n${messageText}`;
+      systemPrompt = `You are ${modelDisplayNames[selectedModel]}. Search for relevant information and provide comprehensive, well-researched answers. `;
+    } else {
+      systemPrompt = `You are ${modelDisplayNames[selectedModel]}. Respond as yourself with your unique capabilities and personality. `;
     }
+
+    // Detect code in user message
+    const codeDetection = detectCodeInMessage(text);
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: text, // Store original text without file descriptions for display
+      text: text,
       isUser: true,
       timestamp: new Date(),
-      model: selectedModel
+      model: selectedModel,
+      hasCode: codeDetection.hasCode,
+      codeLanguage: codeDetection.language,
+      codeContent: codeDetection.code
     };
 
     const updatedMessages = [...messages, userMessage];
@@ -323,20 +363,13 @@ export const EnhancedChatContainer = ({
     setStreamingMessageId(streamingId);
 
     try {
-      console.log('🚀 Sending message to Puter AI:', messageText.slice(0, 100));
-      console.log('📡 Selected model:', selectedModel);
-      console.log('🔗 Session ID:', sessionId);
+      console.log('Sending message to Puter AI:', messageText.slice(0, 100));
+      console.log('Selected model:', selectedModel);
+      console.log('Session ID:', sessionId);
       
       // Check Puter availability
       if (!await puterService.isAvailable()) {
         throw new Error('Puter SDK not available. Please ensure the Puter SDK is loaded.');
-      }
-
-      let systemPrompt = '';
-      if (mode === 'thinking') {
-        systemPrompt = 'Think step by step and explain your reasoning process clearly. Show your thought process and analysis. ';
-      } else if (mode === 'search') {
-        systemPrompt = 'Search for relevant information and provide comprehensive, well-researched answers. ';
       }
 
       let responseText: string;
@@ -361,7 +394,7 @@ export const EnhancedChatContainer = ({
         }, sessionId);
       }
 
-      console.log('✅ Puter response received:', responseText.slice(0, 100));
+      console.log('Puter response received:', responseText.slice(0, 100));
 
       // Update model status
       setModelStatus(prev => ({ ...prev, [selectedModel]: 'working' }));
@@ -369,20 +402,36 @@ export const EnhancedChatContainer = ({
       // Stream the response
       await streamResponseText(responseText);
 
+      // Detect code in AI response
+      const aiCodeDetection = detectCodeInMessage(responseText);
+
       const aiResponse: Message = {
         id: streamingId,
         text: responseText,
         isUser: false,
         timestamp: new Date(),
-        model: selectedModel
+        model: selectedModel,
+        hasCode: aiCodeDetection.hasCode,
+        codeLanguage: aiCodeDetection.language,
+        codeContent: aiCodeDetection.code
       };
 
       const finalMessages = [...updatedMessages, aiResponse];
       setMessages(finalMessages);
       saveChat(finalMessages);
+
+      // Auto-open sandbox for code responses
+      if (aiCodeDetection.hasCode && aiCodeDetection.code && aiCodeDetection.language) {
+        const webLanguages = ['html', 'css', 'javascript', 'jsx', 'tsx', 'vue', 'svelte'];
+        if (webLanguages.includes(aiCodeDetection.language)) {
+          setSandboxCode(aiCodeDetection.code);
+          setSandboxLanguage(aiCodeDetection.language);
+          setShowSandbox(true);
+        }
+      }
       
     } catch (error) {
-      console.error('❌ Puter AI Error:', error);
+      console.error('Puter AI Error:', error);
       
       // Update model status
       setModelStatus(prev => ({ ...prev, [selectedModel]: 'error' }));
@@ -390,7 +439,7 @@ export const EnhancedChatContainer = ({
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       let errorResponse: Message = {
         id: streamingId,
-        text: `I apologize, but I'm unable to process your request at the moment. \n\n**Error:** ${errorMessage}\n\n**Possible solutions:**\n1. Try refreshing the page\n2. Switch to a different model (DeepSeek V3 recommended)\n3. Check your internet connection\n4. Try again in a moment\n\nPlease try again or contact support if the issue persists.`,
+        text: `I apologize, but I'm unable to process your request at the moment. \n\nError: ${errorMessage}\n\nPossible solutions:\n1. Try refreshing the page\n2. Switch to a different model (DeepSeek V3 recommended)\n3. Check your internet connection\n4. Try again in a moment\n\nPlease try again or contact support if the issue persists.`,
         isUser: false,
         timestamp: new Date(),
         model: 'error'
@@ -398,9 +447,9 @@ export const EnhancedChatContainer = ({
 
       // Provide better error messages for specific issues
       if (errorMessage.includes('model')) {
-        errorResponse.text = `The selected model "${modelDisplayNames[selectedModel]}" is currently unavailable. Please try:\n\n**Recommended alternatives:**\n1. **DeepSeek V3** (most reliable)\n2. **GPT-4o Mini** (fast and efficient)\n3. **Claude 3.5 Sonnet** (excellent reasoning)\n\n**Error details:** ${errorMessage}`;
+        errorResponse.text = `The selected model "${modelDisplayNames[selectedModel]}" is currently unavailable. Please try:\n\nRecommended alternatives:\n1. DeepSeek V3 (most reliable)\n2. GPT-4o Mini (fast and efficient)\n3. Claude 3.5 Sonnet (excellent reasoning)\n\nError details: ${errorMessage}`;
       } else if (errorMessage.includes('SDK')) {
-        errorResponse.text = `**Connection issue detected.** Please:\n\n1. **Refresh the page** to reload the AI service\n2. **Check your internet connection**\n3. **Try again in a moment**\n\nThe Puter SDK may need to reload to restore full functionality.`;
+        errorResponse.text = `Connection issue detected. Please:\n\n1. Refresh the page to reload the AI service\n2. Check your internet connection\n3. Try again in a moment\n\nThe Puter SDK may need to reload to restore full functionality.`;
       }
 
       const finalMessages = [...updatedMessages, errorResponse];
@@ -408,7 +457,7 @@ export const EnhancedChatContainer = ({
       saveChat(finalMessages);
 
       toast({
-        title: "❌ AI Response Error",
+        title: "AI Response Error",
         description: `Failed to get response from ${modelDisplayNames[selectedModel]}. Try a different model.`,
         variant: "destructive"
       });
@@ -434,7 +483,7 @@ export const EnhancedChatContainer = ({
   const clearChat = () => {
     const welcomeMessage = {
       id: "welcome",
-      text: "Hello! I'm **Cosmic AI**, your advanced AI assistant with access to multiple cutting-edge AI models including DeepSeek, GPT-4, Claude, Gemini, and more.\n\n🚀 **What I can help you with:**\n• **Coding & Development** - Write, debug, and explain code in 50+ languages\n• **Creative Writing** - Stories, articles, scripts, and more\n• **Analysis & Research** - Data analysis, research, and insights\n• **Problem Solving** - Step-by-step solutions and explanations\n• **Image Analysis** - Describe and analyze uploaded images\n• **File Processing** - Work with documents, code files, and more\n\n💡 **Choose your preferred AI model** from the dropdown above and let's start our conversation!",
+      text: "Hello! I'm Cosmic AI, your advanced AI assistant with access to multiple cutting-edge AI models.\n\nWhat I can help you with:\n• Coding & Development - Write, debug, and explain code in 50+ languages\n• Creative Writing - Stories, articles, scripts, and more\n• Analysis & Research - Data analysis, research, and insights\n• Problem Solving - Step-by-step solutions and explanations\n• Image Analysis - Describe and analyze uploaded images\n• File Processing - Work with documents, code files, and more\n\nChoose your preferred AI model from the Reasoning model dropdown and let's start our conversation!",
       isUser: false,
       timestamp: new Date(),
       model: 'system'
@@ -443,12 +492,13 @@ export const EnhancedChatContainer = ({
     setStreamingText("");
     setIsStreaming(false);
     setStreamingMessageId(null);
+    setShowSuggestions(true);
+    setShowSandbox(false);
     
     // Clear memory for current session and model
     puterService.clearMemory(sessionId, selectedModel);
   };
 
-  // Enhanced regeneration with better error handling
   const regenerateLastResponse = async () => {
     const lastUserMessage = [...messages].reverse().find(m => m.isUser);
     if (lastUserMessage && !isStreaming) {
@@ -464,7 +514,7 @@ export const EnhancedChatContainer = ({
       await handleSendMessage(lastUserMessage.text, [], 'normal');
     } else if (isStreaming) {
       toast({
-        title: "⏳ Please wait",
+        title: "Please wait",
         description: "Please wait for the current response to complete before regenerating."
       });
     }
@@ -476,7 +526,7 @@ export const EnhancedChatContainer = ({
     ).join('\n\n');
     navigator.clipboard.writeText(chatText);
     toast({
-      title: "📋 Chat copied",
+      title: "Chat copied",
       description: "Chat history has been copied to clipboard."
     });
   };
@@ -496,7 +546,7 @@ export const EnhancedChatContainer = ({
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
     toast({
-      title: "💾 Chat exported",
+      title: "Chat exported",
       description: "Chat has been downloaded as JSON file."
     });
   };
@@ -519,174 +569,216 @@ export const EnhancedChatContainer = ({
     }
   };
 
+  const openInSandbox = (code: string, language: string) => {
+    setSandboxCode(code);
+    setSandboxLanguage(language);
+    setShowSandbox(true);
+  };
+
   const getModelStatusBadge = (model: string) => {
     const status = modelStatus[model];
     if (status === 'working') {
-      return <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">✅ Live</Badge>;
+      return <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">Live</Badge>;
     } else if (status === 'error') {
-      return <Badge variant="secondary" className="ml-2 text-xs bg-red-100 text-red-700 border-red-200">❌ Error</Badge>;
+      return <Badge variant="secondary" className="ml-2 text-xs bg-red-100 text-red-700 border-red-200">Error</Badge>;
     } else if (status === 'testing') {
-      return <Badge variant="secondary" className="ml-2 text-xs bg-yellow-100 text-yellow-700 border-yellow-200">🧪 Testing</Badge>;
+      return <Badge variant="secondary" className="ml-2 text-xs bg-yellow-100 text-yellow-700 border-yellow-200">Testing</Badge>;
     }
-    return <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700 border-blue-200">⚡ Ready</Badge>;
+    return <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700 border-blue-200">Ready</Badge>;
   };
 
-  const getModelIcon = (model: string) => {
-    if (model.includes('deepseek')) return '🧠';
-    if (model.includes('gpt')) return '🤖';
-    if (model.includes('claude')) return '🎭';
-    if (model.includes('gemini')) return '💎';
-    if (model.includes('llama')) return '🦙';
-    if (model.includes('mistral')) return '🌪️';
-    if (model.includes('code')) return '💻';
-    return '🚀';
+  const suggestionPrompts = [
+    "Write a React component for a todo list",
+    "Create a Python script for data analysis", 
+    "Build a responsive landing page with HTML/CSS",
+    "Explain how machine learning works",
+    "Help me debug this JavaScript code",
+    "Write a Vue.js component with animations"
+  ];
+
+  const handleSuggestionClick = (suggestion: string) => {
+    handleSendMessage(suggestion, [], 'normal');
+  };
+
+  const handleNewConversation = () => {
+    clearChat();
+    // Generate new session ID
+    const newSessionId = `session-${Date.now()}`;
+    // Clear memory for new session
+    puterService.clearMemory(newSessionId);
+    
+    toast({
+      title: "New Conversation",
+      description: "Started a fresh conversation with clean memory."
+    });
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Enhanced Header with OpenWebUI-like design */}
-      <div className="flex items-center justify-between p-3 sm:p-4 bg-background/95 backdrop-blur-sm border-b border-border/30 sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div className="min-w-0 hidden sm:block">
-              <h1 className="font-bold text-foreground text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Cosmic AI
-              </h1>
-              <p className="text-xs text-muted-foreground">Advanced Multi-Model AI Assistant</p>
-            </div>
-          </div>
+    <div className="flex flex-col h-full bg-background">
+      {/* Header redesigned to match reference image */}
+      <div className="flex items-center justify-between p-4 bg-background border-b border-border/20">
+        <div className="flex items-center gap-4">
+          {/* New Conversation Button */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleNewConversation}
+            className="gap-2 bg-background hover:bg-muted/50 border border-border/30 rounded-lg px-3 py-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New</span>
+          </Button>
           
-          <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
-            <SelectTrigger className="w-40 sm:w-56 bg-muted/50 border border-border/50 text-foreground text-xs sm:text-sm rounded-xl hover:bg-muted/70 transition-colors">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{getModelIcon(selectedModel)}</span>
+          {/* Reasoning model section */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-foreground">Reasoning model</span>
+            <Select value={selectedModel} onValueChange={(value: Model) => setSelectedModel(value)}>
+              <SelectTrigger className="w-56 bg-background border border-border text-foreground text-sm rounded-lg hover:bg-muted/50 transition-colors">
                 <SelectValue />
-              </div>
-            </SelectTrigger>
-            <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[400px] overflow-y-auto rounded-xl shadow-xl">
-              {Object.entries(modelCategories).map(([category, models]) => (
-                <div key={category}>
-                  <div className="px-3 py-2 text-xs font-bold text-muted-foreground border-b border-border/20 bg-muted/30 sticky top-0">
-                    {category}
-                  </div>
-                  {models.map(model => (
-                    <SelectItem key={model} value={model} className="hover:bg-accent/50 text-xs sm:text-sm py-3">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">{getModelIcon(model)}</span>
-                          <span className="truncate font-medium">{modelDisplayNames[model as Model]}</span>
+                <ChevronDown className="w-4 h-4 opacity-50" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover text-popover-foreground border border-border z-50 max-h-[400px] overflow-y-auto rounded-lg shadow-xl">
+                {Object.entries(modelCategories).map(([category, models]) => (
+                  <div key={category}>
+                    <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border/20 bg-muted/30 sticky top-0">
+                      {category}
+                    </div>
+                    {models.map(model => (
+                      <SelectItem key={model} value={model} className="hover:bg-accent/50 text-sm py-3">
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-medium">{modelDisplayNames[model as Model]}</span>
+                          {getModelStatusBadge(model)}
                         </div>
-                        {getModelStatusBadge(model)}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </div>
-              ))}
-            </SelectContent>
-          </Select>
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
-        {/* Enhanced Action buttons */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-          <VoiceSettings>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-9">
-              <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
-            </Button>
-          </VoiceSettings>
-          
-          <div className="hidden sm:flex items-center gap-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={regenerateLastResponse} 
-              disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0"
-              title="Regenerate last response"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={copyChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0"
-              title="Copy chat"
-            >
-              <Copy className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={exportChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0"
-              title="Export chat"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={shareChat}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0"
-              title="Share chat"
-            >
-              <Share className="w-4 h-4" />
-            </Button>
-          </div>
+        {/* Action buttons */}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={regenerateLastResponse} 
+            disabled={isStreaming || messages.filter(m => m.isUser).length === 0}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
           
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={clearChat}
             disabled={isStreaming}
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200 h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
-            title="Clear chat"
+            className="text-muted-foreground hover:text-foreground"
           >
-            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline ml-2">Clear</span>
+            <Trash2 className="w-4 h-4" />
           </Button>
           
-          <div className="text-xs sm:text-sm text-muted-foreground bg-muted/30 px-3 py-1.5 rounded-xl border border-border/30 hidden sm:block">
-            {messages.filter(m => m.id !== 'welcome').length} msgs
+          <div className="text-sm text-muted-foreground bg-muted/30 px-3 py-1.5 rounded-lg border border-border/30">
+            {messages.filter(m => m.id !== 'welcome').length} messages
           </div>
         </div>
       </div>
       
-      {/* Chat Area with enhanced styling */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 px-3 sm:px-4 md:px-6">
-        <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto py-4 sm:py-6">
-          {messages.map(message => (
-            <ChatMessage 
-              key={message.id} 
-              message={message.text} 
-              isUser={message.isUser} 
-              timestamp={message.timestamp} 
-              model={message.model} 
-            />
-          ))}
-          {isStreaming && streamingText && (
-            <div className="animate-fade-in">
-              <ChatMessage 
-                message={streamingText} 
-                isUser={false} 
-                timestamp={new Date()} 
-                model={selectedModel} 
-                isStreaming={true} 
-              />
-            </div>
-          )}
-          {isTyping && !isStreaming && <TypingIndicator />}
-        </div>
-      </ScrollArea>
+      {/* Main Content Area with Resizable Panels */}
+      <div className="flex-1 overflow-hidden">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* Chat Panel */}
+          <ResizablePanel defaultSize={showSandbox ? 50 : 100} minSize={30}>
+            <div className="flex flex-col h-full">
+              {/* Chat Area */}
+              <ScrollArea ref={scrollAreaRef} className="flex-1 px-4 md:px-6">
+                <div className="space-y-6 max-w-4xl mx-auto py-6">
+                  {messages.map(message => (
+                    <div key={message.id}>
+                      <ChatMessage 
+                        message={message.text} 
+                        isUser={message.isUser} 
+                        timestamp={message.timestamp} 
+                        model={message.model} 
+                      />
+                      {message.hasCode && message.codeContent && (
+                        <div className="mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openInSandbox(message.codeContent!, message.codeLanguage!)}
+                            className="gap-2"
+                          >
+                            <Code className="w-4 h-4" />
+                            Open in Sandbox
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {isStreaming && streamingText && (
+                    <div className="animate-fade-in">
+                      <ChatMessage 
+                        message={streamingText} 
+                        isUser={false} 
+                        timestamp={new Date()} 
+                        model={selectedModel} 
+                        isStreaming={true} 
+                      />
+                    </div>
+                  )}
+                  {isTyping && !isStreaming && <TypingIndicator />}
+                  
+                  {/* Suggestion prompts for new chats */}
+                  {showSuggestions && messages.length === 1 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
+                      {suggestionPrompts.map((prompt, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          className="p-4 h-auto text-left justify-start hover:bg-muted/50 border-border/30"
+                          onClick={() => handleSuggestionClick(prompt)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <Sparkles className="w-4 h-4 mt-1 text-primary flex-shrink-0" />
+                            <span className="text-sm">{prompt}</span>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
 
-      {/* Enhanced Input Area */}
-      <div className="p-3 sm:p-4 md:p-6 bg-background/95 backdrop-blur-sm border-t border-border/30">
-        <div className="max-w-4xl mx-auto">
-          <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
-        </div>
+              {/* Input Area */}
+              <div className="p-4 md:p-6 bg-background border-t border-border/20">
+                <div className="max-w-4xl mx-auto">
+                  <EnhancedChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
+                </div>
+              </div>
+            </div>
+          </ResizablePanel>
+
+          {/* Sandbox Panel */}
+          {showSandbox && (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={50} minSize={30}>
+                <div className="h-full border-l border-border/20">
+                  <SandboxEnvironment 
+                    initialCode={sandboxCode} 
+                    initialLanguage={sandboxLanguage}
+                    isEmbedded={true}
+                    onClose={() => setShowSandbox(false)}
+                    className="h-full border-0 rounded-none"
+                  />
+                </div>
+              </ResizablePanel>
+            </>
+          )}
+        </ResizablePanelGroup>
       </div>
     </div>
   );

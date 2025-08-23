@@ -39,7 +39,7 @@ export function UserMenu() {
         
         <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
           <button onclick="downloadWindows()" style="padding: 16px 24px; background: #0078d4; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.2s;">
-            <span style="font-size: 20px;">🖥️</span>
+            <span style="font-size: 20px;">💻</span>
             <div style="text-align: left;">
               <div>Windows App</div>
               <div style="font-size: 12px; opacity: 0.8;">For Windows 10/11</div>
@@ -47,7 +47,7 @@ export function UserMenu() {
           </button>
           
           <button onclick="downloadAndroid()" style="padding: 16px 24px; background: #34a853; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.2s;">
-            <span style="font-size: 20px;">📱</span>
+            <span style="font-size: 20px;">📲</span>
             <div style="text-align: left;">
               <div>Android APK</div>
               <div style="font-size: 12px; opacity: 0.8;">For Android 7.0+</div>
@@ -56,7 +56,7 @@ export function UserMenu() {
         </div>
         
         <div style="background: #f3f4f6; padding: 16px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
-          <h4 style="margin: 0 0 8px 0; color: #374151; font-size: 14px; font-weight: 600;">🚀 Coming Soon Features:</h4>
+          <h4 style="margin: 0 0 8px 0; color: #374151; font-size: 14px; font-weight: 600;">How to get API keys:</h4>
           <ul style="margin: 0; padding-left: 16px; color: #6b7280; font-size: 13px; line-height: 1.5;">
             <li>Offline AI processing</li>
             <li>Native file system integration</li>

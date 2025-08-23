@@ -280,7 +280,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   <h3 className="text-lg font-medium mb-4">About</h3>
                   <div className="space-y-4">
                     <div>
-                      <h4 className="font-medium">AI Chat Application</h4>
+                      <h4 className="font-medium">Cosmic AI</h4>
                       <p className="text-muted-foreground">A modern multi-model AI chat interface</p>
                     </div>
                     <Separator />
