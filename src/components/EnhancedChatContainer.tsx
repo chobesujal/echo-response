@@ -13,7 +13,13 @@ import {
   Bot,
   Palette,
   Wand2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Brain,
+  Code,
+  Calculator,
+  Eye,
+  Rocket,
+  Zap
 } from 'lucide-react';
 import { puterService } from '../lib/puterService';
 
@@ -33,36 +39,12 @@ interface EnhancedChatContainerProps {
   onChatUpdate?: (chatId: string, title: string, messageCount: number) => void;
 }
 
-const MODEL_CATEGORIES = {
-  'Text Generation': [
-    { id: 'gpt-5-chat-latest', name: 'GPT-5 Latest', provider: 'OpenAI', status: 'live' },
-    { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', status: 'live' },
-    { id: 'o1', name: 'o1', provider: 'OpenAI', status: 'live' },
-    { id: 'o1-pro', name: 'o1 Pro', provider: 'OpenAI', status: 'live' },
-    { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', status: 'live' },
-    { id: 'claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic', status: 'live' },
-    { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'DeepSeek', status: 'live' },
-    { id: 'deepseek-reasoner', name: 'DeepSeek R1', provider: 'DeepSeek', status: 'live' },
-    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google', status: 'live' },
-    { id: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', name: 'Llama 3.1 70B', provider: 'Meta', status: 'live' },
-    { id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', name: 'Llama 3.1 405B', provider: 'Meta', status: 'live' },
-    { id: 'mistral-large-latest', name: 'Mistral Large', provider: 'Mistral', status: 'live' }
-  ],
-  'Image Generation': [
-    { id: 'dall-e-3', name: 'DALL-E 3', provider: 'OpenAI', status: 'live' }
-  ],
-  'Code Generation': [
-    { id: 'gpt-4o', name: 'GPT-4o (Code)', provider: 'OpenAI', status: 'live' },
-    { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet (Code)', provider: 'Anthropic', status: 'live' },
-    { id: 'deepseek-chat', name: 'DeepSeek Chat (Code)', provider: 'DeepSeek', status: 'live' }
-  ]
-};
-
-export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek-chat', onChatUpdate }: EnhancedChatContainerProps) {
+export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o', onChatUpdate }: EnhancedChatContainerProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentModel, setCurrentModel] = useState(selectedModel);
   const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  const [modelCategories, setModelCategories] = useState<Record<string, Array<{ id: string; name: string; provider: string; status: string; category: string }>>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
@@ -71,6 +53,21 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
   useEffect(() => {
     setCurrentModel(selectedModel);
   }, [selectedModel]);
+
+  useEffect(() => {
+    // Load model categories from Puter service
+    const loadModels = async () => {
+      try {
+        await puterService.initialize();
+        const categories = puterService.getModelsByCategory();
+        setModelCategories(categories);
+      } catch (error) {
+        console.error('Failed to load models:', error);
+      }
+    };
+    loadModels();
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -273,85 +270,21 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
     }
   };
 
-  // Mount models menu in the designated container
-  useEffect(() => {
-    const container = document.getElementById('models-menu-container');
-    if (container) {
-      const modelSelect = (
-        <Select value={currentModel} onValueChange={setCurrentModel}>
-          <SelectTrigger className="w-full bg-[#020105]/80 border-[#FFFAFA]/20 text-[#FFFAFA] hover:bg-[#FFFAFA]/10">
-            <SelectValue placeholder="Select AI Model" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#020105]/95 border-[#FFFAFA]/30 backdrop-blur-md">
-            {Object.entries(MODEL_CATEGORIES).map(([category, models]) => (
-              <div key={category}>
-                <div className="px-2 py-1.5 text-xs font-semibold text-[#FFFAFA]/60 uppercase tracking-wider">
-                  {category}
-                </div>
-                {models.map((model) => (
-                  <SelectItem 
-                    key={model.id} 
-                    value={model.id}
-                    className="text-[#FFFAFA] hover:bg-[#FFFAFA]/10 focus:bg-[#FFFAFA]/10"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{model.name}</span>
-                        <span className="text-xs text-[#FFFAFA]/60">{model.provider}</span>
-                      </div>
-                      <Badge className={`ml-2 text-xs ${getModelBadgeColor(model.status)}`}>
-                        {model.status}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </div>
-            ))}
-          </SelectContent>
-        </Select>
-      );
-      
-      // This would need to be rendered using a portal or similar React mechanism
-      // For now, we'll handle it in the Layout component
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Featured': return <Sparkles className="w-4 h-4 text-yellow-400" />;
+      case 'Reasoning': return <Brain className="w-4 h-4 text-purple-400" />;
+      case 'Code': return <Code className="w-4 h-4 text-blue-400" />;
+      case 'Math': return <Calculator className="w-4 h-4 text-green-400" />;
+      case 'Vision': return <Eye className="w-4 h-4 text-pink-400" />;
+      case 'Large': return <Rocket className="w-4 h-4 text-red-400" />;
+      case 'Fast': return <Zap className="w-4 h-4 text-orange-400" />;
+      default: return <Bot className="w-4 h-4 text-gray-400" />;
     }
-  });
+  };
 
   return (
     <div className="flex flex-col h-screen bg-[#020105]">
-      {/* Models Menu - Now handled by Layout component */}
-      <div className="hidden">
-        <Select value={currentModel} onValueChange={setCurrentModel}>
-          <SelectTrigger className="w-64 bg-[#020105]/80 border-[#FFFAFA]/30 text-[#FFFAFA] backdrop-blur-sm">
-            <SelectValue placeholder="Select AI Model" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#020105]/95 border-[#FFFAFA]/30">
-            {Object.entries(MODEL_CATEGORIES).map(([category, models]) => (
-              <div key={category}>
-                <div className="px-2 py-1.5 text-xs font-semibold text-[#FFFAFA]/60 uppercase tracking-wider">
-                  {category}
-                </div>
-                {models.map((model) => (
-                  <SelectItem 
-                    key={model.id} 
-                    value={model.id}
-                    className="text-[#FFFAFA] hover:bg-[#FFFAFA]/10 focus:bg-[#FFFAFA]/10"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{model.name}</span>
-                        <span className="text-xs text-[#FFFAFA]/60">{model.provider}</span>
-                      </div>
-                      <Badge className={`ml-2 text-xs ${getModelBadgeColor(model.status)}`}>
-                        {model.status}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </div>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Chat Messages Area */}
       <ScrollArea className="flex-1 px-4 pt-4 pb-4">
@@ -371,9 +304,9 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
                 <Button
                   variant="outline"
                   className="justify-start text-left h-auto p-4 bg-[#020105]/50 border-[#FFFAFA]/30 hover:bg-[#FFFAFA]/10"
-                  onClick={() => handleSendMessage("Explain quantum computing in simple terms")}
+                  onClick={() => handleSendMessage("Explain quantum computing in simple terms", [], 'thinking')}
                 >
-                  <MessageSquare className="w-4 h-4 mr-3 text-blue-400" />
+                  <Brain className="w-4 h-4 mr-3 text-blue-400" />
                   <div>
                     <div className="font-medium text-[#FFFAFA]">Ask about science</div>
                     <div className="text-sm text-[#FFFAFA]/60">Explain quantum computing</div>
@@ -382,9 +315,9 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
                 <Button
                   variant="outline"
                   className="justify-start text-left h-auto p-4 bg-[#020105]/50 border-[#FFFAFA]/30 hover:bg-[#FFFAFA]/10"
-                  onClick={() => handleSendMessage("Write a Python function to sort a list")}
+                  onClick={() => handleSendMessage("Write a Python function to sort a list", [], 'normal')}
                 >
-                  <Bot className="w-4 h-4 mr-3 text-green-400" />
+                  <Code className="w-4 h-4 mr-3 text-green-400" />
                   <div>
                     <div className="font-medium text-[#FFFAFA]">Code assistance</div>
                     <div className="text-sm text-[#FFFAFA]/60">Write Python function</div>
@@ -393,7 +326,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
                 <Button
                   variant="outline"
                   className="justify-start text-left h-auto p-4 bg-[#020105]/50 border-[#FFFAFA]/30 hover:bg-[#FFFAFA]/10"
-                  onClick={() => handleSendMessage("Help me plan a trip to Japan")}
+                  onClick={() => handleSendMessage("Help me plan a trip to Japan", [], 'search')}
                 >
                   <MessageSquare className="w-4 h-4 mr-3 text-orange-400" />
                   <div>
@@ -404,7 +337,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
                 <Button
                   variant="outline"
                   className="justify-start text-left h-auto p-4 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-purple-400/30 hover:bg-purple-500/20"
-                  onClick={() => window.location.href = 'https://cosmic-image.vercel.app'}
+                  onClick={() => window.open('/dalle', '_blank')}
                 >
                   <Palette className="w-4 h-4 mr-3 text-purple-400" />
                   <div>
