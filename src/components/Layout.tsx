@@ -6,13 +6,15 @@ import { AppSidebar } from "./AppSidebar";
 import { EnhancedChatContainer } from "./EnhancedChatContainer";
 import { SettingsDialog } from "./SettingsDialog";
 import { Button } from "@/components/ui/button";
-import { Settings, Sparkles } from "lucide-react";
+import { Settings, Sparkles, Cpu, Zap, Brain, Eye, Code, Calculator, Rocket } from "lucide-react";
+import { puterService } from "@/lib/puterService";
 
 export function Layout() {
   const [currentChatId, setCurrentChatId] = useState<string>();
-  const [selectedModel, setSelectedModel] = useState('deepseek-chat');
+  const [selectedModel, setSelectedModel] = useState('gpt-4o');
   const [darkMode, setDarkMode] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [modelCategories, setModelCategories] = useState<Record<string, Array<{ id: string; name: string; provider: string; status: string; category: string }>>>({});
 
   useEffect(() => {
     // Load theme preference
@@ -21,7 +23,21 @@ export function Layout() {
     const shouldUseDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
     setDarkMode(shouldUseDark);
     document.documentElement.classList.toggle('dark', shouldUseDark);
+    
+    // Initialize Puter service and load models
+    initializePuterService();
   }, []);
+
+  const initializePuterService = async () => {
+    try {
+      await puterService.initialize();
+      const categories = puterService.getModelsByCategory();
+      setModelCategories(categories);
+      console.log('Puter service initialized with models:', categories);
+    } catch (error) {
+      console.error('Failed to initialize Puter service:', error);
+    }
+  };
 
   // FIXED: New Chat Handler - Creates proper unique ID and triggers chat container update
   const handleNewChat = () => {
@@ -82,25 +98,19 @@ export function Layout() {
     console.log('Chat updated:', { chatId, title, messageCount });
   };
 
-  // Models Menu Component
+  // Enhanced Models Menu Component with all Puter models
   const ModelsMenu = ({ selectedModel, onModelChange }: { selectedModel: string; onModelChange: (model: string) => void }) => {
-    const MODEL_CATEGORIES = {
-      'Featured': [
-        { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'DeepSeek', status: 'live' },
-        { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', status: 'live' },
-        { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', status: 'live' },
-        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google', status: 'live' }
-      ],
-      'Reasoning': [
-        { id: 'deepseek-reasoner', name: 'DeepSeek R1', provider: 'DeepSeek', status: 'live' },
-        { id: 'o1', name: 'o1', provider: 'OpenAI', status: 'live' },
-        { id: 'o1-pro', name: 'o1 Pro', provider: 'OpenAI', status: 'live' }
-      ],
-      'Advanced': [
-        { id: 'gpt-5-chat-latest', name: 'GPT-5 Chat', provider: 'OpenAI', status: 'live' },
-        { id: 'claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic', status: 'live' },
-        { id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', name: 'Llama 3.1 405B', provider: 'Meta', status: 'live' }
-      ]
+    const getCategoryIcon = (category: string) => {
+      switch (category) {
+        case 'Featured': return <Sparkles className="w-3 h-3 text-yellow-400" />;
+        case 'Reasoning': return <Brain className="w-3 h-3 text-purple-400" />;
+        case 'Code': return <Code className="w-3 h-3 text-blue-400" />;
+        case 'Math': return <Calculator className="w-3 h-3 text-green-400" />;
+        case 'Vision': return <Eye className="w-3 h-3 text-pink-400" />;
+        case 'Large': return <Rocket className="w-3 h-3 text-red-400" />;
+        case 'Fast': return <Zap className="w-3 h-3 text-orange-400" />;
+        default: return <Cpu className="w-3 h-3 text-gray-400" />;
+      }
     };
 
     const getModelBadgeColor = (status: string) => {
@@ -116,10 +126,11 @@ export function Layout() {
         <SelectTrigger className="w-full bg-[#020105]/80 border-[#FFFAFA]/30 text-[#FFFAFA] hover:bg-[#FFFAFA]/10 focus:ring-2 focus:ring-[#FFFAFA]/30">
           <SelectValue placeholder="Select AI Model" />
         </SelectTrigger>
-        <SelectContent className="bg-[#020105]/95 border-[#FFFAFA]/30 backdrop-blur-md max-h-80">
-          {Object.entries(MODEL_CATEGORIES).map(([category, models]) => (
+        <SelectContent className="bg-[#020105]/95 border-[#FFFAFA]/30 backdrop-blur-md max-h-96 w-80">
+          {Object.entries(modelCategories).map(([category, models]) => (
             <div key={category}>
-              <div className="px-3 py-2 text-xs font-semibold text-[#FFFAFA]/60 uppercase tracking-wider border-b border-[#FFFAFA]/10">
+              <div className="px-3 py-2 text-xs font-semibold text-[#FFFAFA]/60 uppercase tracking-wider border-b border-[#FFFAFA]/10 flex items-center gap-2">
+                {getCategoryIcon(category)}
                 {category}
               </div>
               {models.map((model) => (
@@ -185,10 +196,10 @@ export function Layout() {
             {/* Models Menu Container - Styled to match reference image */}
             <div className="flex items-center gap-3 bg-[#020105]/95 backdrop-blur-md border border-[#FFFAFA]/30 rounded-xl px-4 py-3 shadow-lg">
               <div className="w-6 h-6 rounded border border-[#FFFAFA]/30 bg-[#FFFAFA]/10 flex items-center justify-center">
-                <div className="w-3 h-3 bg-[#FFFAFA] rounded-sm"></div>
+                <Cpu className="w-3 h-3 text-[#FFFAFA]" />
               </div>
               <span className="text-sm font-medium text-[#FFFAFA] hidden sm:block">Model</span>
-              <div className="w-56 relative">
+              <div className="w-64 relative">
                 <ModelsMenu selectedModel={selectedModel} onModelChange={setSelectedModel} />
               </div>
             </div>
