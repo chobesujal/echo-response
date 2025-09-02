@@ -1,1209 +1,332 @@
-// Enhanced Puter AI service with ALL 500+ official models from puter.com
-export interface PuterAIOptions {
-  model?: string;
-  context?: Array<{ role: string; content: string }>;
-  max_tokens?: number;
-  temperature?: number;
-  memory?: boolean;
-  stream?: boolean;
+import { useState, KeyboardEvent, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import { useConversation } from "@11labs/react";
+import { 
+  Plus, 
+  Brain, 
+  Search, 
+  Mic, 
+  MicOff, 
+  Upload, 
+  Image as ImageIcon, 
+  FileText, 
+  ChevronDown,
+  Volume2,
+  VolumeX,
+  Send,
+  Paperclip,
+  X,
+  Palette
+} from "lucide-react";
+
+interface EnhancedChatInputProps {
+  onSendMessage: (message: string, files?: File[], mode?: 'thinking' | 'search' | 'normal') => void;
+  disabled?: boolean;
 }
 
-export interface ChatMemory {
-  messages: Array<{ role: string; content: string; timestamp: Date }>;
-  model: string;
-  sessionId: string;
-}
+export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInputProps) => {
+  const [message, setMessage] = useState("");
+  const [mode, setMode] = useState<'thinking' | 'search' | 'normal'>('normal');
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState(localStorage.getItem('elevenlabs-api-key') || '');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { toast } = useToast();
 
-export class PuterService {
-  private static instance: PuterService;
-  private chatMemory: Map<string, ChatMemory> = new Map();
-  private isInitialized = false;
-  private availableModels: Set<string> = new Set();
-  
-  static getInstance(): PuterService {
-    if (!PuterService.instance) {
-      PuterService.instance = new PuterService();
-    }
-    return PuterService.instance;
-  }
-  
-  async initialize(): Promise<boolean> {
-    try {
-      let attempts = 0;
-      while (attempts < 50) {
-        if (typeof (window as any).puter !== 'undefined' && 
-            typeof (window as any).puter.ai !== 'undefined') {
-          this.isInitialized = true;
-          console.log('Puter SDK initialized successfully');
-          return true;
-        }
-        await new Promise(resolve => setTimeout(resolve, 200));
-        attempts++;
-      }
-      
-      console.warn('Puter SDK not available after timeout');
-      return false;
-    } catch (error) {
-      console.error('Error initializing Puter SDK:', error);
-      return false;
-    }
-  }
-  
-  async isAvailable(): Promise<boolean> {
-    if (!this.isInitialized) {
-      await this.initialize();
-    }
-    
-    try {
-      return typeof (window as any).puter !== 'undefined' && 
-             typeof (window as any).puter.ai !== 'undefined';
-    } catch (error) {
-      console.error('Error checking Puter availability:', error);
-      return false;
-    }
-  }
-  
-  addToMemory(sessionId: string, role: string, content: string, model: string) {
-    const memoryKey = `${sessionId}-${model}`;
-    
-    if (!this.chatMemory.has(memoryKey)) {
-      this.chatMemory.set(memoryKey, {
-        messages: [],
-        model: model,
-        sessionId: sessionId
+  // ElevenLabs conversation setup
+  const conversation = useConversation({
+    onConnect: () => {
+      toast({
+        title: "Voice Connected",
+        description: "Voice chat is now active"
       });
+    },
+    onDisconnect: () => {
+      setIsListening(false);
+      toast({
+        title: "Voice Disconnected",
+        description: "Voice chat ended"
+      });
+    },
+    onMessage: (message) => {
+      if (message.message && message.message.trim()) {
+        onSendMessage(message.message, [], 'normal');
+      }
+    },
+    onError: (error) => {
+      console.error('Voice chat error:', error);
+      toast({
+        title: "Voice Error",
+        description: "Voice chat encountered an error",
+        variant: "destructive"
+      });
+      setIsListening(false);
     }
-    
-    const memory = this.chatMemory.get(memoryKey)!;
-    memory.messages.push({ 
-      role, 
-      content, 
-      timestamp: new Date() 
+  });
+
+  const handleSend = () => {
+    if ((message.trim() || attachedFiles.length > 0) && !disabled) {
+      onSendMessage(message.trim(), attachedFiles, mode);
+      setMessage("");
+      setAttachedFiles([]);
+      setMode('normal');
+      
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const validFiles = files.filter(file => {
+      const validTypes = [
+        'image/', 'text/', 'application/pdf', 'application/msword', 
+        'application/vnd.openxmlformats-officedocument',
+        'application/json', 'application/javascript'
+      ];
+      const validExtensions = ['.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.cpp', '.c', '.cs', '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.html', '.css', '.scss', '.sass', '.vue', '.svelte', '.md', '.yml', '.yaml', '.xml', '.sql', '.sh', '.ps1'];
+      
+      const isValidType = validTypes.some(type => file.type.startsWith(type));
+      const isValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+      
+      return (isValidType || isValidExtension) && isValidSize;
     });
-    
-    if (memory.messages.length > 20) {
-      memory.messages = memory.messages.slice(-20);
-    }
-    
-    try {
-      localStorage.setItem(`chat-memory-${memoryKey}`, JSON.stringify(memory));
-    } catch (error) {
-      console.warn('Failed to save memory to localStorage:', error);
-    }
-  }
-  
-  getMemory(sessionId: string, model: string): Array<{ role: string; content: string }> {
-    const memoryKey = `${sessionId}-${model}`;
-    
-    try {
-      const saved = localStorage.getItem(`chat-memory-${memoryKey}`);
-      if (saved) {
-        const memory = JSON.parse(saved);
-        this.chatMemory.set(memoryKey, memory);
-        return memory.messages.map((m: any) => ({ role: m.role, content: m.content }));
-      }
-    } catch (error) {
-      console.warn('Failed to load memory from localStorage:', error);
-    }
-    
-    const memory = this.chatMemory.get(memoryKey);
-    return memory ? memory.messages.map(m => ({ role: m.role, content: m.content })) : [];
-  }
-  
-  clearMemory(sessionId: string, model?: string) {
-    if (model) {
-      const memoryKey = `${sessionId}-${model}`;
-      this.chatMemory.delete(memoryKey);
-      try {
-        localStorage.removeItem(`chat-memory-${memoryKey}`);
-      } catch (error) {
-        console.warn('Failed to clear memory from localStorage:', error);
-      }
-    } else {
-      const keysToDelete = Array.from(this.chatMemory.keys()).filter(key => key.startsWith(sessionId));
-      keysToDelete.forEach(key => {
-        this.chatMemory.delete(key);
-        try {
-          localStorage.removeItem(`chat-memory-${key}`);
-        } catch (error) {
-          console.warn('Failed to clear memory from localStorage:', error);
-        }
+
+    if (validFiles.length !== files.length) {
+      toast({
+        title: "Invalid Files",
+        description: "Some files were skipped. Only supported file types under 10MB are allowed.",
+        variant: "destructive"
       });
     }
-  }
-  
-  async chat(message: string, options: PuterAIOptions = {}, sessionId?: string): Promise<string> {
-    if (!await this.isAvailable()) {
-      console.log('Puter SDK not available, using enhanced fallback');
-      return this.getEnhancedFallbackResponse(message, options.model);
+
+    setAttachedFiles(prev => [...prev, ...validFiles]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
-    
-    const defaultOptions: PuterAIOptions = {
-      model: 'gpt-4o',
-      max_tokens: 2000,
-      temperature: 0.7,
-      memory: true,
-      stream: false,
-      ...options
-    };
-    
+  };
+
+  const removeFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleVoiceToggle = async () => {
+    if (!elevenLabsApiKey) {
+      const apiKey = prompt("Please enter your ElevenLabs API key:");
+      if (!apiKey) return;
+      
+      setElevenLabsApiKey(apiKey);
+      localStorage.setItem('elevenlabs-api-key', apiKey);
+    }
+
     try {
-      console.log('Calling Puter AI with:', { 
-        message: message.slice(0, 100), 
-        model: defaultOptions.model,
-        sessionId: sessionId 
+      if (!isListening) {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const agentId = localStorage.getItem('elevenlabs-agent-id') || 'default-agent';
+        await conversation.startSession({ agentId });
+        setIsListening(true);
+      } else {
+        await conversation.endSession();
+        setIsListening(false);
+      }
+    } catch (error) {
+      toast({
+        title: "Voice Chat Error",
+        description: "Failed to start voice chat. Please check your microphone permissions and API key.",
+        variant: "destructive"
       });
-      
-      let conversationMessages: Array<{ role: string; content: string }> = [];
-      
-      if (defaultOptions.memory && sessionId && defaultOptions.model) {
-        const memory = this.getMemory(sessionId, defaultOptions.model);
-        conversationMessages = [...memory.slice(-10)];
-        console.log(`Using ${conversationMessages.length} messages from memory for context`);
-      }
-      
-      const systemPrompt = this.getModelSystemPrompt(defaultOptions.model!);
-      if (systemPrompt && conversationMessages.length === 0) {
-        conversationMessages.push({ role: 'system', content: systemPrompt });
-      }
-      
-      conversationMessages.push({ role: 'user', content: message });
-      
-      const puterModel = defaultOptions.model!;
-      console.log('Using Puter model:', puterModel);
-      
-      let response;
-      
-      try {
-        response = await (window as any).puter.ai.chat(conversationMessages, {
-          model: puterModel,
-          max_tokens: defaultOptions.max_tokens,
-          temperature: defaultOptions.temperature
-        });
-        console.log('Conversation method successful');
-      } catch (error1) {
-        console.warn('Conversation method failed:', error1.message);
-        
-        try {
-          const messageWithPrompt = systemPrompt ? `${systemPrompt}\n\nUser: ${message}` : message;
-          response = await (window as any).puter.ai.chat(messageWithPrompt, {
-            model: puterModel,
-            max_tokens: defaultOptions.max_tokens,
-            temperature: defaultOptions.temperature
-          });
-          console.log('Simple method with prompt successful');
-        } catch (error2) {
-          console.warn('Simple method failed:', error2.message);
+      console.error('Voice chat error:', error);
+    }
+  };
+
+  const getModeIcon = () => {
+    switch (mode) {
+      case 'thinking':
+        return <Brain className="w-3 h-3 sm:w-4 sm:h-4" />;
+      case 'search':
+        return <Search className="w-3 h-3 sm:w-4 sm:h-4" />;
+      default:
+        return <Brain className="w-3 h-3 sm:w-4 sm:h-4" />;
+    }
+  };
+
+  const getModeLabel = () => {
+    switch (mode) {
+      case 'thinking':
+        return 'Thinking';
+      case 'search':
+        return 'Search';
+      default:
+        return 'Normal';
+    }
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+    
+    // Auto-resize
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+  };
+
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      return <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />;
+    }
+    return <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />;
+  };
+
+  return (
+    <div className="relative max-w-4xl mx-auto">
+      {/* Attached Files */}
+      {attachedFiles.length > 0 && (
+        <div className="flex flex-wrap gap-2 p-2 bg-[#020105]/30 rounded-t-lg border border-[#FFFAFA]/10 mb-0">
+          {attachedFiles.map((file, index) => (
+            <div key={index} className="flex items-center gap-2 bg-[#FFFAFA]/10 backdrop-blur-sm px-2 py-1 rounded-lg text-xs border border-[#FFFAFA]/20">
+              {getFileIcon(file)}
+              <span className="truncate max-w-24 text-[#FFFAFA] font-medium">{file.name}</span>
+              <button
+                onClick={() => removeFile(index)}
+                className="text-[#FFFAFA]/60 hover:text-[#FFFAFA] transition-colors ml-1 flex-shrink-0 hover:bg-[#FFFAFA]/20 rounded-full p-0.5"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Main Input Container */}
+      <div className={`flex items-end gap-2 p-2 bg-[#020105]/40 border border-[#FFFAFA]/20 shadow-lg backdrop-blur-md ${attachedFiles.length > 0 ? 'rounded-b-lg border-t-0' : 'rounded-lg'}`}>
+        {/* Attach Files Button */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => fileInputRef.current?.click()}
+          className="shrink-0 w-7 h-7 rounded-full bg-[#FFFAFA]/5 hover:bg-[#FFFAFA]/15 border border-[#FFFAFA]/20 transition-all duration-200 p-0"
+          disabled={disabled}
+        >
+          <Paperclip className="w-3.5 h-3.5 text-[#FFFAFA]/70" />
+        </Button>
+
+        {/* Message Input */}
+        <div className="flex-1 relative">
+          <Textarea
+            ref={textareaRef}
+            value={message}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
+            placeholder={isListening ? "Listening... Speak now" : "Send a message..."}
+            className="min-h-[36px] max-h-[100px] resize-none pr-20 bg-transparent border-0 rounded-lg text-[#FFFAFA] placeholder:text-[#FFFAFA]/50 focus:ring-0 focus:outline-none transition-all duration-200 text-sm"
+            disabled={disabled || isListening}
+            rows={1}
+          />
           
-          try {
-            response = await (window as any).puter.ai.chat(message, {
-              model: puterModel
-            });
-            console.log('Basic method successful');
-          } catch (error3) {
-            console.error('All methods failed');
-            throw new Error(`All API methods failed. Last error: ${error3.message}`);
-          }
-        }
-      }
-      
-      console.log('Raw Puter response received:', typeof response, response ? 'has content' : 'empty');
-      const responseText = this.extractResponseText(response);
-      
-      if (!responseText || responseText.length < 5) {
-        throw new Error('Empty or invalid response received');
-      }
-      
-      if (defaultOptions.memory && sessionId && defaultOptions.model) {
-        this.addToMemory(sessionId, 'user', message, defaultOptions.model);
-        this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
-        console.log('Added messages to memory for model:', defaultOptions.model);
-      }
-      
-      console.log('Chat completed successfully');
-      return responseText;
-    } catch (error) {
-      console.error('Puter AI Error:', error);
-      return this.getEnhancedFallbackResponse(message, defaultOptions.model, error);
-    }
-  }
+          {/* Mode Selector & Voice Button */}
+          <div className="absolute right-1 bottom-1 flex items-center gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 rounded-full bg-[#FFFAFA]/5 hover:bg-[#FFFAFA]/15 text-xs font-medium transition-all duration-200 text-[#FFFAFA]"
+                  disabled={disabled}
+                >
+                  {getModeIcon()}
+                  <ChevronDown className="w-2.5 h-2.5 ml-1 text-[#FFFAFA]/70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-[#020105]/90 text-[#FFFAFA] border border-[#FFFAFA]/20 z-50 rounded-lg backdrop-blur-md">
+                <DropdownMenuItem onClick={() => setMode('normal')} className="hover:bg-[#FFFAFA]/10 text-[#FFFAFA]">
+                  <Brain className="w-3 h-3 mr-2 text-blue-400" />
+                  Normal Chat
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMode('thinking')} className="hover:bg-[#FFFAFA]/10 text-[#FFFAFA]">
+                  <Brain className="w-3 h-3 mr-2 text-purple-400" />
+                  Thinking Mode
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMode('search')} className="hover:bg-[#FFFAFA]/10 text-[#FFFAFA]">
+                  <Search className="w-3 h-3 mr-2 text-green-400" />
+                  Search Mode
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  window.open('/dalle', '_blank');
+                }} className="hover:bg-[#FFFAFA]/10 text-[#FFFAFA]">
+                  <Palette className="w-3 h-3 mr-2 text-pink-400" />
+                  Generate Images
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setMessage("Create a detailed explanation of ");
+                  textareaRef.current?.focus();
+                }} className="hover:bg-[#FFFAFA]/10 text-[#FFFAFA]">
+                  <Brain className="w-4 h-4 mr-2 text-orange-400" />
+                  Detailed Explanation
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-  async chatStream(message: string, options: PuterAIOptions = {}, sessionId?: string, onChunk?: (chunk: string) => void): Promise<string> {
-    if (!await this.isAvailable()) {
-      const fallback = this.getEnhancedFallbackResponse(message, options.model);
-      if (onChunk) {
-        // Simulate streaming for fallback
-        const words = fallback.split(' ');
-        for (let i = 0; i < words.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 50));
-          onChunk(words.slice(0, i + 1).join(' '));
-        }
-      }
-      return fallback;
-    }
-    
-    const defaultOptions: PuterAIOptions = {
-      model: 'gpt-4o',
-      max_tokens: 2000,
-      temperature: 0.7,
-      memory: true,
-      stream: true,
-      ...options
-    };
-    
-    try {
-      let conversationMessages: Array<{ role: string; content: string }> = [];
-      
-      if (defaultOptions.memory && sessionId && defaultOptions.model) {
-        const memory = this.getMemory(sessionId, defaultOptions.model);
-        conversationMessages = [...memory.slice(-10)];
-      }
-      
-      const systemPrompt = this.getModelSystemPrompt(defaultOptions.model!);
-      if (systemPrompt && conversationMessages.length === 0) {
-        conversationMessages.push({ role: 'system', content: systemPrompt });
-      }
-      
-      conversationMessages.push({ role: 'user', content: message });
-      
-      // Try streaming first
-      try {
-        const response = await (window as any).puter.ai.chat(conversationMessages, {
-          model: defaultOptions.model!,
-          max_tokens: defaultOptions.max_tokens,
-          temperature: defaultOptions.temperature,
-          stream: true
-        });
-        
-        if (response && typeof response.getReader === 'function') {
-          const reader = response.getReader();
-          let fullResponse = '';
-          
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            const chunk = new TextDecoder().decode(value);
-            fullResponse += chunk;
-            
-            if (onChunk) {
-              onChunk(fullResponse);
-            }
-          }
-          
-          return fullResponse;
-        }
-      } catch (streamError) {
-        console.warn('Streaming failed, falling back to regular chat:', streamError);
-      }
-      
-      // Fallback to regular chat
-      const response = await this.chat(message, { ...defaultOptions, stream: false }, sessionId);
-      
-      // Simulate streaming for non-streaming response
-      if (onChunk) {
-        const words = response.split(' ');
-        for (let i = 0; i < words.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 30));
-          onChunk(words.slice(0, i + 1).join(' '));
-        }
-      }
-      
-      return response;
-    } catch (error) {
-      console.error('Puter streaming error:', error);
-      return this.getEnhancedFallbackResponse(message, defaultOptions.model, error);
-    }
-  }
+            {/* Voice Chat Button */}
+            <Button 
+              variant={isListening ? "default" : "ghost"}
+              size="sm" 
+              className={`shrink-0 w-6 h-6 sm:w-8 sm:h-8 p-0 rounded-full transition-all duration-300 ${
+                isListening 
+                  ? 'bg-blue-600 text-white animate-pulse shadow-lg border border-blue-400' 
+                  : 'bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 border border-[#FFFAFA]/30'
+              }`}
+              onClick={handleVoiceToggle}
+              disabled={disabled}
+            >
+              {isListening ? <Volume2 className="w-3 h-3 sm:w-4 sm:h-4" /> : <Mic className="w-3 h-3 sm:w-4 sm:h-4 text-[#FFFAFA]/70" />}
+            </Button>
+          </div>
+        </div>
 
-  async imageToText(imageUrl: string, prompt?: string, sessionId?: string): Promise<string> {
-    if (!await this.isAvailable()) {
-      return 'Image processing service not available. Please ensure the Puter SDK is loaded and try again.';
-    }
-    
-    try {
-      console.log('Processing image with Puter AI:', imageUrl);
-      let response;
-      
-      try {
-        response = await (window as any).puter.ai.chat(
-          prompt || 'Describe this image in detail',
-          imageUrl,
-          false,
-          { model: 'gpt-4o', max_tokens: 1000 }
-        );
-        console.log('Chat with image URL method successful');
-      } catch (error1) {
-        console.warn('Chat with image URL failed:', error1.message);
-        
-        try {
-          if ((window as any).puter.ai.img2txt) {
-            response = await (window as any).puter.ai.img2txt(imageUrl, prompt || 'Describe this image in detail');
-            console.log('Direct img2txt method successful');
-          } else {
-            throw new Error('img2txt method not available');
-          }
-        } catch (error2) {
-          console.warn('Direct img2txt failed:', error2.message);
-          
-          response = await (window as any).puter.ai.chat(
-            `I have an image that I'd like you to analyze. ${prompt || 'Please describe what you would expect to see in a typical image and provide a helpful response.'}`,
-            { model: 'gpt-4o-mini' }
-          );
-          console.log('Fallback method used');
-        }
-      }
-      
-      console.log('Puter AI image response received');
-      const responseText = this.extractResponseText(response);
-      
-      if (sessionId) {
-        this.addToMemory(sessionId, 'user', `[Image Analysis] ${prompt || 'Describe this image'}`, 'gpt-4o');
-        this.addToMemory(sessionId, 'assistant', responseText, 'gpt-4o');
-      }
-      
-      return responseText;
-    } catch (error) {
-      console.error('Puter imageToText error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return `I apologize, but I'm unable to process the image at the moment. 
+        {/* Send Button */}
+        <Button 
+          onClick={handleSend} 
+          disabled={(!message.trim() && attachedFiles.length === 0) || disabled}
+          size="sm"
+          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 disabled:bg-[#FFFAFA]/20 disabled:text-[#FFFAFA]/40 transition-all duration-200 shadow-lg hover:shadow-xl border border-blue-400/30"
+        >
+          <Send className="w-3 h-3 sm:w-4 sm:h-4" />
+        </Button>
+      </div>
 
-Error details: ${errorMessage}
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        multiple
+        accept="image/*,.pdf,.doc,.docx,.txt,.md,.js,.ts,.jsx,.tsx,.py,.java,.cpp,.c,.cs,.go,.rs,.php,.rb,.swift,.kt,.html,.css,.scss,.sass,.vue,.svelte,.yml,.yaml,.xml,.json,.sql,.sh,.ps1"
+        className="hidden"
+      />
 
-Possible solutions:
-1. Ensure the image URL is accessible
-2. Try uploading the image again
-3. Check your internet connection
-4. Try with a different image format (JPG, PNG, WebP)
-
-Please try again or contact support if the issue persists.`;
-    }
-  }
-
-  async generateImage(prompt: string, options: {
-    model?: string;
-    size?: '1024x1024' | '1792x1024' | '1024x1792';
-    quality?: 'standard' | 'hd';
-    style?: 'vivid' | 'natural';
-    sessionId?: string;
-    testMode?: boolean;
-  } = {}): Promise<{ imageUrl?: string; error?: string }> {
-    if (!await this.isAvailable()) {
-      return { error: 'Image generation service not available. Please ensure the Puter SDK is loaded and try again.' };
-    }
-    
-    try {
-      console.log('Generating image with DALL-E:', prompt);
-      
-      const testMode = options.testMode !== undefined ? options.testMode : false;
-      const imageElement = await (window as any).puter.ai.txt2img(prompt, testMode);
-      
-      if (!imageElement || !imageElement.src) {
-        throw new Error('No image element received from DALL-E API');
-      }
-      
-      const imageUrl = imageElement.src;
-      
-      if (options.sessionId) {
-        this.addToMemory(options.sessionId, 'user', `[Image Generation] ${prompt}`, 'dall-e');
-        this.addToMemory(options.sessionId, 'assistant', `Generated image: ${imageUrl}`, 'dall-e');
-      }
-      
-      console.log('Image generated successfully:', imageUrl);
-      return { imageUrl };
-      
-    } catch (error) {
-      console.error('DALL-E generation error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return { 
-        error: `Failed to generate image: ${errorMessage}
-        
-Possible solutions:
-1. Try a more detailed prompt
-2. Check your internet connection
-3. Try again in a moment
-4. Ensure Puter SDK is properly loaded
-
-Please try again or contact support if the issue persists.`
-      };
-    }
-  }
-
-  async chatWithFiles(content: any[], options: PuterAIOptions = {}, sessionId?: string): Promise<string> {
-    if (!await this.isAvailable()) {
-      return 'File processing service not available. Please ensure the Puter SDK is loaded and try again.';
-    }
-
-    const defaultOptions: PuterAIOptions = {
-      model: 'gpt-4o',
-      max_tokens: 2500,
-      temperature: 0.7,
-      memory: true,
-      stream: false,
-      ...options
-    };
-    
-    try {
-      let contextMessages: Array<{ role: string; content: any }> = [];
-      if (defaultOptions.memory && sessionId && defaultOptions.model) {
-        const memory = this.getMemory(sessionId, defaultOptions.model);
-        contextMessages = memory.slice(-8).map(m => ({ role: m.role, content: m.content }));
-        console.log(`Using ${contextMessages.length} messages from memory for file chat`);
-      }
-      
-      const systemPrompt = this.getModelSystemPrompt(defaultOptions.model!);
-      if (systemPrompt && contextMessages.length === 0) {
-        contextMessages.push({ role: 'system', content: systemPrompt });
-      }
-      
-      const messages = [
-        ...contextMessages,
-        {
-          role: 'user',
-          content: content
-        }
-      ];
-
-      console.log('Sending files to Puter AI:', { messageCount: messages.length, model: defaultOptions.model });
-      
-      let response;
-      try {
-        response = await (window as any).puter.ai.chat(messages, {
-          model: defaultOptions.model!,
-          max_tokens: defaultOptions.max_tokens,
-          temperature: defaultOptions.temperature
-        });
-      } catch (error) {
-        const textContent = content.map(c => c.text || '[File content]').join('\n');
-        response = await this.chat(textContent, defaultOptions, sessionId);
-        return response;
-      }
-      
-      console.log('Puter AI file response received');
-      const responseText = this.extractResponseText(response);
-      
-      if (defaultOptions.memory && sessionId && defaultOptions.model) {
-        const userContent = content.map(c => c.text || '[File content]').join('\n');
-        this.addToMemory(sessionId, 'user', userContent, defaultOptions.model);
-        this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
-      }
-      
-      return responseText;
-    } catch (error) {
-      console.error('Puter chatWithFiles error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return `I apologize, but I'm unable to process the files at the moment.
-
-Error details: ${errorMessage}
-
-Possible solutions:
-1. Try uploading smaller files
-2. Ensure files are in supported formats
-3. Check your internet connection
-4. Try again in a moment
-
-Please try again or contact support if the issue persists.`;
-    }
-  }
-  
-  private getEnhancedFallbackResponse(message: string, model?: string, error?: any): string {
-    const modelName = model ? this.getModelDisplayName(model) : 'AI';
-    
-    if (message.toLowerCase().includes('code') || message.toLowerCase().includes('program')) {
-      return `I'd be happy to help with coding! However, I'm currently experiencing connectivity issues with the ${modelName} service.
-
-Quick Coding Tips:
-1. For debugging: Check syntax, indentation, and variable names
-2. For new projects: Start with a basic structure and build incrementally
-3. For algorithms: Break down the problem into smaller steps
-
-Please try again in a moment when the connection is restored.
-
-${error ? `\nTechnical details: ${error.message || error}` : ''}`;
-    }
-    
-    if (message.toLowerCase().includes('explain') || message.toLowerCase().includes('what is')) {
-      return `I understand you're looking for an explanation about: "${message.slice(0, 100)}..."
-
-I'm currently experiencing connectivity issues with the ${modelName} service, but I'd be happy to help once the connection is restored.
-
-In the meantime:
-- Try rephrasing your question
-- Break complex topics into smaller questions
-- Check if there are specific aspects you'd like me to focus on
-
-Please try again shortly!
-
-${error ? `\nTechnical details: ${error.message || error}` : ''}`;
-    }
-    
-    const fallbackResponses = [
-      `Hello! I'm ${modelName} and I'd love to help with: "${message.slice(0, 80)}..." 
-
-However, I'm currently experiencing connectivity issues. Please try again in a moment - I'll be back online shortly!`,
-      
-      `Your message has been received by ${modelName}! Unfortunately, there seems to be a temporary service issue. 
-
-I'm working to get back online and assist you with your question about "${message.slice(0, 60)}..."`,
-      
-      `${modelName} here! I see your question about "${message.slice(0, 60)}..." and I want to help, but I'm experiencing some technical difficulties.
-
-Please try again in a few moments - I should be back online soon!`,
-    ];
-    
-    const baseResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-    return error ? `${baseResponse}\n\nTechnical details: ${error.message || error}` : baseResponse;
-  }
-  
-  private extractResponseText(response: any): string {
-    console.log('Extracting text from response:', typeof response, response ? 'has content' : 'empty');
-    
-    if (typeof response === 'string' && response.trim()) {
-      return response.trim();
-    }
-    
-    if (response && typeof response === 'object') {
-      const possiblePaths = [
-        response.message?.content,
-        response.message?.content?.[0]?.text,
-        response.text,
-        response.content,
-        response.message,
-        response.data,
-        response.choices?.[0]?.message?.content,
-        response.response,
-        response.output,
-        response.result,
-        response.answer,
-        response.reply
-      ];
-      
-      for (const text of possiblePaths) {
-        if (typeof text === 'string' && text.trim()) {
-          return text.trim();
-        }
-      }
-      
-      try {
-        const stringified = JSON.stringify(response, null, 2);
-        if (stringified && stringified !== '{}' && stringified !== 'null') {
-          return `Response received in unexpected format:\n${stringified}`;
-        }
-      } catch (e) {
-        console.warn('Failed to stringify response:', e);
-      }
-    }
-    
-    if (response === null || response === undefined) {
-      console.log('Response is null/undefined');
-      return 'No response received from AI service. Please try again.';
-    }
-    
-    const stringResponse = String(response);
-    console.log('Converted to string:', stringResponse.slice(0, 100));
-    
-    if (!stringResponse || stringResponse === 'undefined' || stringResponse === 'null' || stringResponse === '[object Object]') {
-      return 'Invalid response format from AI service. Please try again.';
-    }
-    
-    return stringResponse;
-  }
-  
-  private getModelSystemPrompt(model: string): string {
-    const prompts: Record<string, string> = {
-      // OpenAI Models
-      'gpt-4o': 'You are GPT-4o, an advanced AI model created by OpenAI. You are multimodal and capable of processing text and images. Always identify yourself as GPT-4o when asked about your identity.',
-      'gpt-4o-mini': 'You are GPT-4o Mini, a fast and efficient AI model created by OpenAI. You provide quick, accurate responses. Always identify yourself as GPT-4o Mini when asked about your identity.',
-      'gpt-4-turbo': 'You are GPT-4 Turbo, an advanced AI model created by OpenAI. You are optimized for speed and efficiency. Always identify yourself as GPT-4 Turbo when asked about your identity.',
-      'gpt-4': 'You are GPT-4, an advanced AI model created by OpenAI. You excel at complex reasoning and analysis. Always identify yourself as GPT-4 when asked about your identity.',
-      'gpt-3.5-turbo': 'You are GPT-3.5 Turbo, an AI model created by OpenAI. You are fast and efficient at various tasks. Always identify yourself as GPT-3.5 Turbo when asked about your identity.',
-      'o1': 'You are o1, an advanced reasoning AI model created by OpenAI. You excel at complex problem-solving and step-by-step analysis. Always identify yourself as o1 when asked about your identity.',
-      'o1-pro': 'You are o1-pro, a professional reasoning AI model created by OpenAI. You provide expert-level analysis and solutions. Always identify yourself as o1-pro when asked about your identity.',
-      'o1-preview': 'You are o1-preview, a preview version of OpenAI\'s reasoning model. You excel at complex reasoning tasks. Always identify yourself as o1-preview when asked about your identity.',
-      'o1-mini': 'You are o1-mini, a compact reasoning AI model created by OpenAI. You provide efficient reasoning capabilities. Always identify yourself as o1-mini when asked about your identity.',
-      
-      // Anthropic Models
-      'claude-3-5-sonnet-20241022': 'You are Claude 3.5 Sonnet, an AI assistant created by Anthropic. You are helpful, harmless, and honest. Always identify yourself as Claude 3.5 Sonnet when asked about your identity.',
-      'claude-3-5-sonnet-20240620': 'You are Claude 3.5 Sonnet, an AI assistant created by Anthropic. You are helpful, harmless, and honest. Always identify yourself as Claude 3.5 Sonnet when asked about your identity.',
-      'claude-3-5-haiku-20241022': 'You are Claude 3.5 Haiku, an AI assistant created by Anthropic. You are fast and efficient. Always identify yourself as Claude 3.5 Haiku when asked about your identity.',
-      'claude-3-opus-20240229': 'You are Claude 3 Opus, a powerful AI assistant created by Anthropic. You excel at complex tasks and reasoning. Always identify yourself as Claude 3 Opus when asked about your identity.',
-      'claude-3-sonnet-20240229': 'You are Claude 3 Sonnet, an AI assistant created by Anthropic. You provide balanced performance and capability. Always identify yourself as Claude 3 Sonnet when asked about your identity.',
-      'claude-3-haiku-20240307': 'You are Claude 3 Haiku, an AI assistant created by Anthropic. You are fast and efficient. Always identify yourself as Claude 3 Haiku when asked about your identity.',
-      
-      // Google Models
-      'gemini-1.5-pro': 'You are Gemini 1.5 Pro, an AI model created by Google. You are capable of handling complex tasks. Always identify yourself as Gemini 1.5 Pro when asked about your identity.',
-      'gemini-1.5-flash': 'You are Gemini 1.5 Flash, an AI model created by Google. You are fast and efficient at various tasks. Always identify yourself as Gemini 1.5 Flash when asked about your identity.',
-      'gemini-2.0-flash-exp': 'You are Gemini 2.0 Flash Experimental, an advanced AI model created by Google. You represent the latest in AI technology. Always identify yourself as Gemini 2.0 Flash when asked about your identity.',
-      
-      // DeepSeek Models
-      'deepseek-chat': 'You are DeepSeek Chat, an advanced AI model created by DeepSeek. You are known for your conversational abilities and technical expertise. Always identify yourself as DeepSeek Chat when asked about your identity.',
-      'deepseek-reasoner': 'You are DeepSeek Reasoner, a reasoning-focused AI model created by DeepSeek. You excel at step-by-step thinking and logical analysis. Always identify yourself as DeepSeek Reasoner when asked about your identity.',
-      
-      // Meta Models
-      'llama-3.3-70b-instruct': 'You are Llama 3.3 70B, a language model created by Meta. You provide balanced performance and capability. Always identify yourself as Llama 3.3 70B when asked about your identity.',
-      'llama-3.1-405b-instruct': 'You are Llama 3.1 405B, a large language model created by Meta. You are one of the most capable open-source models. Always identify yourself as Llama 3.1 405B when asked about your identity.',
-      'llama-3.1-70b-instruct': 'You are Llama 3.1 70B, a language model created by Meta. You provide balanced performance and capability. Always identify yourself as Llama 3.1 70B when asked about your identity.',
-      'llama-3.1-8b-instruct': 'You are Llama 3.1 8B, an efficient language model created by Meta. You are optimized for speed and efficiency. Always identify yourself as Llama 3.1 8B when asked about your identity.',
-      
-      // Mistral Models
-      'mistral-large-2411': 'You are Mistral Large, an advanced AI model created by Mistral AI. You excel at complex reasoning and analysis. Always identify yourself as Mistral Large when asked about your identity.',
-      'pixtral-large-2411': 'You are Pixtral Large, a multimodal AI model created by Mistral AI. You can process both text and images. Always identify yourself as Pixtral Large when asked about your identity.',
-      'codestral-2405': 'You are Codestral, a code-specialized AI model created by Mistral AI. You excel at programming tasks. Always identify yourself as Codestral when asked about your identity.',
-      
-      // xAI Models
-      'grok-2-1212': 'You are Grok-2, an AI model created by xAI. You have a witty and engaging personality. Always identify yourself as Grok-2 when asked about your identity.',
-      'grok-beta': 'You are Grok Beta, an AI model created by xAI. You have a witty and engaging personality. Always identify yourself as Grok when asked about your identity.',
-      
-      // Qwen Models
-      'qwen-2.5-72b-instruct': 'You are Qwen 2.5 72B, an AI model created by Alibaba Cloud. You are capable of handling various tasks. Always identify yourself as Qwen 2.5 72B when asked about your identity.',
-      'qwq-32b-preview': 'You are QwQ 32B, a reasoning-focused AI model created by Alibaba Cloud. You excel at step-by-step thinking. Always identify yourself as QwQ 32B when asked about your identity.',
-      
-      // Cohere Models
-      'command-r-plus-08-2024': 'You are Command R+, an AI model created by Cohere. You excel at following instructions and reasoning. Always identify yourself as Command R+ when asked about your identity.',
-      'command-r-08-2024': 'You are Command R, an AI model created by Cohere. You are efficient at various tasks. Always identify yourself as Command R when asked about your identity.'
-    };
-    
-    return prompts[model] || '';
-  }
-  
-  getAvailableModels(): string[] {
-    return [
-      // Featured Models (Top tier)
-      'gpt-4o',
-      'claude-3-5-sonnet-20241022',
-      'deepseek-chat',
-      'deepseek-reasoner',
-      'gemini-2.0-flash-exp',
-      'o1',
-      'o1-pro',
-      'grok-2-1212',
-      
-      // OpenAI Models - Complete List
-      'gpt-4o-mini',
-      'gpt-4-turbo',
-      'gpt-4',
-      'gpt-3.5-turbo',
-      'o1-preview',
-      'o1-mini',
-      'chatgpt-4o-latest',
-      'gpt-4o-realtime-preview',
-      'gpt-4o-2024-11-20',
-      'gpt-4o-2024-08-06',
-      'gpt-4o-2024-05-13',
-      'gpt-4o-mini-2024-07-18',
-      'gpt-4-turbo-2024-04-09',
-      'gpt-4-0125-preview',
-      'gpt-4-1106-preview',
-      'gpt-4-0613',
-      'gpt-3.5-turbo-0125',
-      'gpt-3.5-turbo-1106',
-      
-      // Anthropic Models - Complete List
-      'claude-3-5-sonnet-20240620',
-      'claude-3-5-haiku-20241022',
-      'claude-3-opus-20240229',
-      'claude-3-sonnet-20240229',
-      'claude-3-haiku-20240307',
-      
-      // Google Models - Complete List
-      'gemini-1.5-pro',
-      'gemini-1.5-pro-002',
-      'gemini-1.5-pro-001',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-002',
-      'gemini-1.5-flash-001',
-      'gemini-1.5-flash-8b',
-      'gemini-1.0-pro',
-      'gemini-2.0-flash-thinking-exp',
-      'gemini-exp-1206',
-      'gemini-exp-1121',
-      'learnlm-1.5-pro-experimental',
-      
-      // Meta Models - Complete List
-      'llama-3.3-70b-instruct',
-      'llama-3.2-90b-text-preview',
-      'llama-3.2-11b-text-preview',
-      'llama-3.2-3b-preview',
-      'llama-3.2-1b-preview',
-      'llama-3.1-405b-instruct',
-      'llama-3.1-70b-instruct',
-      'llama-3.1-8b-instruct',
-      'llama-3-70b-instruct',
-      'llama-3-8b-instruct',
-      'llama-guard-3-8b',
-      'llama-guard-3-11b',
-      
-      // DeepSeek Models - Complete List
-      'deepseek-r1-distill-llama-70b',
-      'deepseek-r1-distill-qwen-32b',
-      'deepseek-r1-distill-qwen-14b',
-      'deepseek-r1-distill-qwen-7b',
-      'deepseek-r1-distill-qwen-1.5b',
-      
-      // Mistral Models - Complete List
-      'mistral-large-2411',
-      'mistral-large-2407',
-      'mistral-small-2409',
-      'mistral-nemo-2407',
-      'pixtral-large-2411',
-      'pixtral-12b-2409',
-      'codestral-2405',
-      'codestral-mamba-2407',
-      'ministral-8b-2410',
-      'ministral-3b-2410',
-      
-      // Cohere Models - Complete List
-      'command-r-plus-08-2024',
-      'command-r-plus-04-2024',
-      'command-r-08-2024',
-      'command-r-03-2024',
-      'command-r7b-12-2024',
-      'aya-expanse-8b',
-      'aya-expanse-32b',
-      
-      // xAI Models - Complete List
-      'grok-2-vision-1212',
-      'grok-beta',
-      'grok-vision-beta',
-      
-      // Qwen Models - Complete List (100+ models)
-      'qwen-2.5-72b-instruct',
-      'qwen-2.5-32b-instruct',
-      'qwen-2.5-14b-instruct',
-      'qwen-2.5-7b-instruct',
-      'qwen-2.5-3b-instruct',
-      'qwen-2.5-1.5b-instruct',
-      'qwen-2.5-0.5b-instruct',
-      'qwen-2.5-coder-32b-instruct',
-      'qwen-2.5-coder-14b-instruct',
-      'qwen-2.5-coder-7b-instruct',
-      'qwen-2.5-coder-3b-instruct',
-      'qwen-2.5-coder-1.5b-instruct',
-      'qwen-2.5-coder-0.5b-instruct',
-      'qwen-2.5-math-72b-instruct',
-      'qwen-2.5-math-7b-instruct',
-      'qwen-2.5-math-1.5b-instruct',
-      'qwq-32b-preview',
-      
-      // Additional Models (300+ more)
-      'nvidia-llama-3.1-nemotron-70b-instruct',
-      'nous-hermes-2-mixtral-8x7b-dpo',
-      'nous-hermes-2-yi-34b',
-      'dolphin-2.5-mixtral-8x7b',
-      'yi-34b-chat',
-      'solar-10.7b-instruct',
-      'openchat-3.5-0106',
-      'toppy-m-7b',
-      'openhermes-2.5-mistral-7b',
-      'zephyr-7b-beta',
-      'mythomax-l2-13b',
-      'airoboros-l2-70b',
-      'chronos-hermes-13b',
-      'remm-slerp-l2-13b',
-      'weaver',
-      'goliath-120b',
-      'alpaca-7b',
-      'vicuna-7b',
-      'vicuna-13b',
-      'vicuna-33b',
-      'wizardlm-13b',
-      'wizardlm-30b',
-      'wizardlm-70b',
-      'manticore-13b',
-      'guanaco-33b',
-      'guanaco-65b',
-      
-      // Additional 400+ models from various providers
-      'anthropic-claude-instant-v1',
-      'anthropic-claude-v1',
-      'anthropic-claude-v1-100k',
-      'anthropic-claude-v2',
-      'anthropic-claude-v2-100k',
-      'cohere-command',
-      'cohere-command-light',
-      'cohere-command-nightly',
-      'ai21-j2-light',
-      'ai21-j2-mid',
-      'ai21-j2-ultra',
-      'huggingface-codellama-34b-instruct',
-      'huggingface-codellama-13b-instruct',
-      'huggingface-codellama-7b-instruct',
-      'huggingface-starcoder',
-      'huggingface-santacoder',
-      'together-redpajama-incite-7b-chat',
-      'together-redpajama-incite-3b-chat',
-      'together-alpaca-7b',
-      'together-falcon-7b-instruct',
-      'together-falcon-40b-instruct',
-      'together-mpt-7b-chat',
-      'together-mpt-30b-chat',
-      'replicate-llama-2-70b-chat',
-      'replicate-llama-2-13b-chat',
-      'replicate-llama-2-7b-chat',
-      'replicate-vicuna-13b',
-      'replicate-alpaca-7b',
-      'palm-2-chat-bison',
-      'palm-2-codechat-bison',
-      'claude-instant-1',
-      'claude-instant-1.2',
-      'claude-2',
-      'claude-2.1',
-      'text-davinci-003',
-      'text-davinci-002',
-      'text-curie-001',
-      'text-babbage-001',
-      'text-ada-001',
-      'code-davinci-002',
-      'code-cushman-001',
-      'gpt-3.5-turbo-instruct',
-      'gpt-3.5-turbo-16k',
-      'gpt-3.5-turbo-0613',
-      'gpt-3.5-turbo-16k-0613',
-      'gpt-3.5-turbo-0301',
-      'gpt-4-0314',
-      'gpt-4-32k',
-      'gpt-4-32k-0314',
-      'gpt-4-32k-0613',
-      'gpt-4-vision-preview',
-      'gpt-4-1106-vision-preview',
-      'dall-e-2',
-      'dall-e-3',
-      'whisper-1',
-      'tts-1',
-      'tts-1-hd',
-      'text-embedding-ada-002',
-      'text-embedding-3-small',
-      'text-embedding-3-large',
-      'text-moderation-latest',
-      'text-moderation-stable'
-    ];
-  }
-  
-  getModelDisplayName(modelId: string): string {
-    const displayNames: Record<string, string> = {
-      // OpenAI Models
-      'gpt-4o': 'GPT-4o',
-      'gpt-4o-mini': 'GPT-4o Mini',
-      'gpt-4-turbo': 'GPT-4 Turbo',
-      'gpt-4': 'GPT-4',
-      'gpt-3.5-turbo': 'GPT-3.5 Turbo',
-      'o1': 'o1',
-      'o1-pro': 'o1 Pro',
-      'o1-preview': 'o1 Preview',
-      'o1-mini': 'o1 Mini',
-      'chatgpt-4o-latest': 'ChatGPT-4o Latest',
-      'gpt-4o-realtime-preview': 'GPT-4o Realtime',
-      'gpt-4o-2024-11-20': 'GPT-4o (Nov 2024)',
-      'gpt-4o-2024-08-06': 'GPT-4o (Aug 2024)',
-      'gpt-4o-2024-05-13': 'GPT-4o (May 2024)',
-      'gpt-4o-mini-2024-07-18': 'GPT-4o Mini (Jul 2024)',
-      'gpt-4-turbo-2024-04-09': 'GPT-4 Turbo (Apr 2024)',
-      'gpt-4-0125-preview': 'GPT-4 (Jan 2024)',
-      'gpt-4-1106-preview': 'GPT-4 (Nov 2023)',
-      'gpt-4-0613': 'GPT-4 (Jun 2023)',
-      'gpt-3.5-turbo-0125': 'GPT-3.5 Turbo (Jan 2024)',
-      'gpt-3.5-turbo-1106': 'GPT-3.5 Turbo (Nov 2023)',
-      
-      // Anthropic Models
-      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-      'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet (Jun)',
-      'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
-      'claude-3-opus-20240229': 'Claude 3 Opus',
-      'claude-3-sonnet-20240229': 'Claude 3 Sonnet',
-      'claude-3-haiku-20240307': 'Claude 3 Haiku',
-      
-      // Google Models
-      'gemini-1.5-pro': 'Gemini 1.5 Pro',
-      'gemini-1.5-pro-002': 'Gemini 1.5 Pro (002)',
-      'gemini-1.5-pro-001': 'Gemini 1.5 Pro (001)',
-      'gemini-1.5-flash': 'Gemini 1.5 Flash',
-      'gemini-1.5-flash-002': 'Gemini 1.5 Flash (002)',
-      'gemini-1.5-flash-001': 'Gemini 1.5 Flash (001)',
-      'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
-      'gemini-1.0-pro': 'Gemini 1.0 Pro',
-      'gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
-      'gemini-2.0-flash-thinking-exp': 'Gemini 2.0 Thinking',
-      'gemini-exp-1206': 'Gemini Exp (Dec)',
-      'gemini-exp-1121': 'Gemini Exp (Nov)',
-      'learnlm-1.5-pro-experimental': 'LearnLM 1.5 Pro',
-      
-      // Meta Models
-      'llama-3.3-70b-instruct': 'Llama 3.3 70B',
-      'llama-3.2-90b-text-preview': 'Llama 3.2 90B',
-      'llama-3.2-11b-text-preview': 'Llama 3.2 11B',
-      'llama-3.2-3b-preview': 'Llama 3.2 3B',
-      'llama-3.2-1b-preview': 'Llama 3.2 1B',
-      'llama-3.1-405b-instruct': 'Llama 3.1 405B',
-      'llama-3.1-70b-instruct': 'Llama 3.1 70B',
-      'llama-3.1-8b-instruct': 'Llama 3.1 8B',
-      'llama-3-70b-instruct': 'Llama 3 70B',
-      'llama-3-8b-instruct': 'Llama 3 8B',
-      'llama-guard-3-8b': 'Llama Guard 3 8B',
-      'llama-guard-3-11b': 'Llama Guard 3 11B',
-      
-      // DeepSeek Models
-      'deepseek-chat': 'DeepSeek Chat',
-      'deepseek-reasoner': 'DeepSeek R1',
-      'deepseek-r1-distill-llama-70b': 'DeepSeek R1 Distill Llama 70B',
-      'deepseek-r1-distill-qwen-32b': 'DeepSeek R1 Distill Qwen 32B',
-      'deepseek-r1-distill-qwen-14b': 'DeepSeek R1 Distill Qwen 14B',
-      'deepseek-r1-distill-qwen-7b': 'DeepSeek R1 Distill Qwen 7B',
-      'deepseek-r1-distill-qwen-1.5b': 'DeepSeek R1 Distill Qwen 1.5B',
-      
-      // Mistral Models
-      'mistral-large-2411': 'Mistral Large',
-      'mistral-large-2407': 'Mistral Large (Jul)',
-      'mistral-small-2409': 'Mistral Small',
-      'mistral-nemo-2407': 'Mistral Nemo',
-      'pixtral-large-2411': 'Pixtral Large',
-      'pixtral-12b-2409': 'Pixtral 12B',
-      'codestral-2405': 'Codestral',
-      'codestral-mamba-2407': 'Codestral Mamba',
-      'ministral-8b-2410': 'Ministral 8B',
-      'ministral-3b-2410': 'Ministral 3B',
-      
-      // Cohere Models
-      'command-r-plus-08-2024': 'Command R+',
-      'command-r-plus-04-2024': 'Command R+ (Apr)',
-      'command-r-08-2024': 'Command R',
-      'command-r-03-2024': 'Command R (Mar)',
-      'command-r7b-12-2024': 'Command R7B',
-      'aya-expanse-8b': 'Aya Expanse 8B',
-      'aya-expanse-32b': 'Aya Expanse 32B',
-      
-      // xAI Models
-      'grok-2-1212': 'Grok-2',
-      'grok-2-vision-1212': 'Grok-2 Vision',
-      'grok-beta': 'Grok Beta',
-      'grok-vision-beta': 'Grok Vision Beta',
-      
-      // Qwen Models (Complete series)
-      'qwen-2.5-72b-instruct': 'Qwen 2.5 72B',
-      'qwen-2.5-32b-instruct': 'Qwen 2.5 32B',
-      'qwen-2.5-14b-instruct': 'Qwen 2.5 14B',
-      'qwen-2.5-7b-instruct': 'Qwen 2.5 7B',
-      'qwen-2.5-3b-instruct': 'Qwen 2.5 3B',
-      'qwen-2.5-1.5b-instruct': 'Qwen 2.5 1.5B',
-      'qwen-2.5-0.5b-instruct': 'Qwen 2.5 0.5B',
-      'qwen-2.5-coder-32b-instruct': 'Qwen 2.5 Coder 32B',
-      'qwen-2.5-coder-14b-instruct': 'Qwen 2.5 Coder 14B',
-      'qwen-2.5-coder-7b-instruct': 'Qwen 2.5 Coder 7B',
-      'qwen-2.5-coder-3b-instruct': 'Qwen 2.5 Coder 3B',
-      'qwen-2.5-coder-1.5b-instruct': 'Qwen 2.5 Coder 1.5B',
-      'qwen-2.5-coder-0.5b-instruct': 'Qwen 2.5 Coder 0.5B',
-      'qwen-2.5-math-72b-instruct': 'Qwen 2.5 Math 72B',
-      'qwen-2.5-math-7b-instruct': 'Qwen 2.5 Math 7B',
-      'qwen-2.5-math-1.5b-instruct': 'Qwen 2.5 Math 1.5B',
-      'qwq-32b-preview': 'QwQ 32B',
-      
-      // Additional 400+ models
-      'nvidia-llama-3.1-nemotron-70b-instruct': 'NVIDIA Nemotron 70B',
-      'nous-hermes-2-mixtral-8x7b-dpo': 'Nous Hermes 2 Mixtral',
-      'nous-hermes-2-yi-34b': 'Nous Hermes 2 Yi 34B',
-      'dolphin-2.5-mixtral-8x7b': 'Dolphin 2.5 Mixtral',
-      'yi-34b-chat': 'Yi 34B Chat',
-      'solar-10.7b-instruct': 'Solar 10.7B',
-      'openchat-3.5-0106': 'OpenChat 3.5',
-      'toppy-m-7b': 'Toppy M 7B',
-      'openhermes-2.5-mistral-7b': 'OpenHermes 2.5',
-      'zephyr-7b-beta': 'Zephyr 7B Beta',
-      'mythomax-l2-13b': 'MythoMax L2 13B',
-      'airoboros-l2-70b': 'Airoboros L2 70B',
-      'chronos-hermes-13b': 'Chronos Hermes 13B',
-      'remm-slerp-l2-13b': 'ReMM SLERP L2 13B',
-      'weaver': 'Weaver',
-      'goliath-120b': 'Goliath 120B',
-      'alpaca-7b': 'Alpaca 7B',
-      'vicuna-7b': 'Vicuna 7B',
-      'vicuna-13b': 'Vicuna 13B',
-      'vicuna-33b': 'Vicuna 33B',
-      'wizardlm-13b': 'WizardLM 13B',
-      'wizardlm-30b': 'WizardLM 30B',
-      'wizardlm-70b': 'WizardLM 70B',
-      'manticore-13b': 'Manticore 13B',
-      'guanaco-33b': 'Guanaco 33B',
-      'guanaco-65b': 'Guanaco 65B'
-    };
-    
-    return displayNames[modelId] || modelId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  }
-  
-  async testModel(modelId: string): Promise<boolean> {
-    try {
-      const response = await this.chat('Hello', { model: modelId, max_tokens: 10 });
-      return response.length > 0 && !response.includes('error') && !response.includes('not available');
-    } catch (error) {
-      console.warn(`Model ${modelId} test failed:`, error);
-      return false;
-    }
-  }
-  
-  getWorkingModels(): string[] {
-    return Array.from(this.availableModels);
-  }
-  
-  isModelWorking(modelId: string): boolean {
-    return this.availableModels.has(modelId);
-  }
-
-  // Get models organized by category with ALL 500+ models
-  getModelsByCategory(): Record<string, Array<{ id: string; name: string; provider: string; status: string; category: string }>> {
-    return {
-      'Featured': [
-        { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', status: 'live', category: 'Multimodal' },
-        { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', status: 'live', category: 'Text' },
-        { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'DeepSeek', status: 'live', category: 'Text' },
-        { id: 'deepseek-reasoner', name: 'DeepSeek R1', provider: 'DeepSeek', status: 'live', category: 'Reasoning' },
-        { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', provider: 'Google', status: 'live', category: 'Multimodal' },
-        { id: 'o1', name: 'o1', provider: 'OpenAI', status: 'live', category: 'Reasoning' },
-        { id: 'grok-2-1212', name: 'Grok-2', provider: 'xAI', status: 'live', category: 'Text' },
-        { id: 'llama-3.1-405b-instruct', name: 'Llama 3.1 405B', provider: 'Meta', status: 'live', category: 'Large' }
-      ],
-      'OpenAI': [
-        { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', status: 'live', category: 'Multimodal' },
-        { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', status: 'live', category: 'Fast' },
-        { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-4', name: 'GPT-4', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'OpenAI', status: 'live', category: 'Fast' },
-        { id: 'o1', name: 'o1', provider: 'OpenAI', status: 'live', category: 'Reasoning' },
-        { id: 'o1-pro', name: 'o1 Pro', provider: 'OpenAI', status: 'live', category: 'Reasoning' },
-        { id: 'o1-preview', name: 'o1 Preview', provider: 'OpenAI', status: 'live', category: 'Reasoning' },
-        { id: 'o1-mini', name: 'o1 Mini', provider: 'OpenAI', status: 'live', category: 'Reasoning' },
-        { id: 'chatgpt-4o-latest', name: 'ChatGPT-4o Latest', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-4o-realtime-preview', name: 'GPT-4o Realtime', provider: 'OpenAI', status: 'beta', category: 'Realtime' },
-        { id: 'gpt-4o-2024-11-20', name: 'GPT-4o (Nov 2024)', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-4o-2024-08-06', name: 'GPT-4o (Aug 2024)', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-4o-2024-05-13', name: 'GPT-4o (May 2024)', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-4o-mini-2024-07-18', name: 'GPT-4o Mini (Jul 2024)', provider: 'OpenAI', status: 'live', category: 'Fast' },
-        { id: 'gpt-4-turbo-2024-04-09', name: 'GPT-4 Turbo (Apr 2024)', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-4-0125-preview', name: 'GPT-4 (Jan 2024)', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-4-1106-preview', name: 'GPT-4 (Nov 2023)', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-4-0613', name: 'GPT-4 (Jun 2023)', provider: 'OpenAI', status: 'live', category: 'Text' },
-        { id: 'gpt-3.5-turbo-0125', name: 'GPT-3.5 Turbo (Jan 2024)', provider: 'OpenAI', status: 'live', category: 'Fast' },
-        { id: 'gpt-3.5-turbo-1106', name: 'GPT-3.5 Turbo (Nov 2023)', provider: 'OpenAI', status: 'live', category: 'Fast' }
-      ],
-      'Anthropic': [
-        { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', status: 'live', category: 'Text' },
-        { id: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet (Jun)', provider: 'Anthropic', status: 'live', category: 'Text' },
-        { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'Anthropic', status: 'live', category: 'Fast' },
-        { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'Anthropic', status: 'live', category: 'Large' },
-        { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', provider: 'Anthropic', status: 'live', category: 'Text' },
-        { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', provider: 'Anthropic', status: 'live', category: 'Fast' }
-      ],
-      'Google': [
-        { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', provider: 'Google', status: 'live', category: 'Multimodal' },
-        { id: 'gemini-2.0-flash-thinking-exp', name: 'Gemini 2.0 Thinking', provider: 'Google', status: 'live', category: 'Reasoning' },
-        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google', status: 'live', category: 'Text' },
-        { id: 'gemini-1.5-pro-002', name: 'Gemini 1.5 Pro (002)', provider: 'Google', status: 'live', category: 'Text' },
-        { id: 'gemini-1.5-pro-001', name: 'Gemini 1.5 Pro (001)', provider: 'Google', status: 'live', category: 'Text' },
-        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google', status: 'live', category: 'Fast' },
-        { id: 'gemini-1.5-flash-002', name: 'Gemini 1.5 Flash (002)', provider: 'Google', status: 'live', category: 'Fast' },
-        { id: 'gemini-1.5-flash-001', name: 'Gemini 1.5 Flash (001)', provider: 'Google', status: 'live', category: 'Fast' },
-        { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash 8B', provider: 'Google', status: 'live', category: 'Fast' },
-        { id: 'gemini-1.0-pro', name: 'Gemini 1.0 Pro', provider: 'Google', status: 'live', category: 'Text' },
-        { id: 'gemini-exp-1206', name: 'Gemini Exp (Dec)', provider: 'Google', status: 'beta', category: 'Experimental' },
-        { id: 'gemini-exp-1121', name: 'Gemini Exp (Nov)', provider: 'Google', status: 'beta', category: 'Experimental' },
-        { id: 'learnlm-1.5-pro-experimental', name: 'LearnLM 1.5 Pro', provider: 'Google', status: 'beta', category: 'Educational' }
-      ],
-      'DeepSeek': [
-        { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'DeepSeek', status: 'live', category: 'Text' },
-        { id: 'deepseek-reasoner', name: 'DeepSeek R1', provider: 'DeepSeek', status: 'live', category: 'Reasoning' },
-        { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', provider: 'DeepSeek', status: 'live', category: 'Reasoning' },
-        { id: 'deepseek-r1-distill-qwen-32b', name: 'DeepSeek R1 Distill Qwen 32B', provider: 'DeepSeek', status: 'live', category: 'Reasoning' },
-        { id: 'deepseek-r1-distill-qwen-14b', name: 'DeepSeek R1 Distill Qwen 14B', provider: 'DeepSeek', status: 'live', category: 'Reasoning' },
-        { id: 'deepseek-r1-distill-qwen-7b', name: 'DeepSeek R1 Distill Qwen 7B', provider: 'DeepSeek', status: 'live', category: 'Reasoning' },
-        { id: 'deepseek-r1-distill-qwen-1.5b', name: 'DeepSeek R1 Distill Qwen 1.5B', provider: 'DeepSeek', status: 'live', category: 'Reasoning' }
-      ],
-      'Meta': [
-        { id: 'llama-3.3-70b-instruct', name: 'Llama 3.3 70B', provider: 'Meta', status: 'live', category: 'Large' },
-        { id: 'llama-3.2-90b-text-preview', name: 'Llama 3.2 90B', provider: 'Meta', status: 'live', category: 'Large' },
-        { id: 'llama-3.2-11b-text-preview', name: 'Llama 3.2 11B', provider: 'Meta', status: 'live', category: 'Text' },
-        { id: 'llama-3.2-3b-preview', name: 'Llama 3.2 3B', provider: 'Meta', status: 'live', category: 'Fast' },
-        { id: 'llama-3.2-1b-preview', name: 'Llama 3.2 1B', provider: 'Meta', status: 'live', category: 'Fast' },
-        { id: 'llama-3.1-405b-instruct', name: 'Llama 3.1 405B', provider: 'Meta', status: 'live', category: 'Large' },
-        { id: 'llama-3.1-70b-instruct', name: 'Llama 3.1 70B', provider: 'Meta', status: 'live', category: 'Large' },
-        { id: 'llama-3.1-8b-instruct', name: 'Llama 3.1 8B', provider: 'Meta', status: 'live', category: 'Fast' },
-        { id: 'llama-3-70b-instruct', name: 'Llama 3 70B', provider: 'Meta', status: 'live', category: 'Large' },
-        { id: 'llama-3-8b-instruct', name: 'Llama 3 8B', provider: 'Meta', status: 'live', category: 'Fast' },
-        { id: 'llama-guard-3-8b', name: 'Llama Guard 3 8B', provider: 'Meta', status: 'live', category: 'Safety' },
-        { id: 'llama-guard-3-11b', name: 'Llama Guard 3 11B', provider: 'Meta', status: 'live', category: 'Safety' }
-      ],
-      'Mistral': [
-        { id: 'mistral-large-2411', name: 'Mistral Large', provider: 'Mistral', status: 'live', category: 'Large' },
-        { id: 'mistral-large-2407', name: 'Mistral Large (Jul)', provider: 'Mistral', status: 'live', category: 'Large' },
-        { id: 'mistral-small-2409', name: 'Mistral Small', provider: 'Mistral', status: 'live', category: 'Fast' },
-        { id: 'mistral-nemo-2407', name: 'Mistral Nemo', provider: 'Mistral', status: 'live', category: 'Text' },
-        { id: 'pixtral-large-2411', name: 'Pixtral Large', provider: 'Mistral', status: 'live', category: 'Vision' },
-        { id: 'pixtral-12b-2409', name: 'Pixtral 12B', provider: 'Mistral', status: 'live', category: 'Vision' },
-        { id: 'codestral-2405', name: 'Codestral', provider: 'Mistral', status: 'live', category: 'Code' },
-        { id: 'codestral-mamba-2407', name: 'Codestral Mamba', provider: 'Mistral', status: 'live', category: 'Code' },
-        { id: 'ministral-8b-2410', name: 'Ministral 8B', provider: 'Mistral', status: 'live', category: 'Fast' },
-        { id: 'ministral-3b-2410', name: 'Ministral 3B', provider: 'Mistral', status: 'live', category: 'Fast' }
-      ],
-      'Cohere': [
-        { id: 'command-r-plus-08-2024', name: 'Command R+', provider: 'Cohere', status: 'live', category: 'Text' },
-        { id: 'command-r-plus-04-2024', name: 'Command R+ (Apr)', provider: 'Cohere', status: 'live', category: 'Text' },
-        { id: 'command-r-08-2024', name: 'Command R', provider: 'Cohere', status: 'live', category: 'Text' },
-        { id: 'command-r-03-2024', name: 'Command R (Mar)', provider: 'Cohere', status: 'live', category: 'Text' },
-        { id: 'command-r7b-12-2024', name: 'Command R7B', provider: 'Cohere', status: 'live', category: 'Fast' },
-        { id: 'aya-expanse-8b', name: 'Aya Expanse 8B', provider: 'Cohere', status: 'live', category: 'Multilingual' },
-        { id: 'aya-expanse-32b', name: 'Aya Expanse 32B', provider: 'Cohere', status: 'live', category: 'Multilingual' }
-      ],
-      'xAI': [
-        { id: 'grok-2-1212', name: 'Grok-2', provider: 'xAI', status: 'live', category: 'Text' },
-        { id: 'grok-2-vision-1212', name: 'Grok-2 Vision', provider: 'xAI', status: 'live', category: 'Vision' },
-        { id: 'grok-beta', name: 'Grok Beta', provider: 'xAI', status: 'beta', category: 'Text' },
-        { id: 'grok-vision-beta', name: 'Grok Vision Beta', provider: 'xAI', status: 'beta', category: 'Vision' }
-      ],
-      'Qwen': [
-        { id: 'qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B', provider: 'Alibaba', status: 'live', category: 'Large' },
-        { id: 'qwen-2.5-32b-instruct', name: 'Qwen 2.5 32B', provider: 'Alibaba', status: 'live', category: 'Text' },
-        { id: 'qwen-2.5-14b-instruct', name: 'Qwen 2.5 14B', provider: 'Alibaba', status: 'live', category: 'Text' },
-        { id: 'qwen-2.5-7b-instruct', name: 'Qwen 2.5 7B', provider: 'Alibaba', status: 'live', category: 'Fast' },
-        { id: 'qwen-2.5-3b-instruct', name: 'Qwen 2.5 3B', provider: 'Alibaba', status: 'live', category: 'Fast' },
-        { id: 'qwen-2.5-1.5b-instruct', name: 'Qwen 2.5 1.5B', provider: 'Alibaba', status: 'live', category: 'Fast' },
-        { id: 'qwen-2.5-0.5b-instruct', name: 'Qwen 2.5 0.5B', provider: 'Alibaba', status: 'live', category: 'Fast' },
-        { id: 'qwen-2.5-coder-32b-instruct', name: 'Qwen 2.5 Coder 32B', provider: 'Alibaba', status: 'live', category: 'Code' },
-        { id: 'qwen-2.5-coder-14b-instruct', name: 'Qwen 2.5 Coder 14B', provider: 'Alibaba', status: 'live', category: 'Code' },
-        { id: 'qwen-2.5-coder-7b-instruct', name: 'Qwen 2.5 Coder 7B', provider: 'Alibaba', status: 'live', category: 'Code' },
-        { id: 'qwen-2.5-coder-3b-instruct', name: 'Qwen 2.5 Coder 3B', provider: 'Alibaba', status: 'live', category: 'Code' },
-        { id: 'qwen-2.5-coder-1.5b-instruct', name: 'Qwen 2.5 Coder 1.5B', provider: 'Alibaba', status: 'live', category: 'Code' },
-        { id: 'qwen-2.5-coder-0.5b-instruct', name: 'Qwen 2.5 Coder 0.5B', provider: 'Alibaba', status: 'live', category: 'Code' },
-        { id: 'qwen-2.5-math-72b-instruct', name: 'Qwen 2.5 Math 72B', provider: 'Alibaba', status: 'live', category: 'Math' },
-        { id: 'qwen-2.5-math-7b-instruct', name: 'Qwen 2.5 Math 7B', provider: 'Alibaba', status: 'live', category: 'Math' },
-        { id: 'qwen-2.5-math-1.5b-instruct', name: 'Qwen 2.5 Math 1.5B', provider: 'Alibaba', status: 'live', category: 'Math' },
-        { id: 'qwq-32b-preview', name: 'QwQ 32B', provider: 'Alibaba', status: 'live', category: 'Reasoning' }
-      ],
-      'Community': [
-        { id: 'nvidia-llama-3.1-nemotron-70b-instruct', name: 'NVIDIA Nemotron 70B', provider: 'NVIDIA', status: 'live', category: 'Large' },
-        { id: 'nous-hermes-2-mixtral-8x7b-dpo', name: 'Nous Hermes 2 Mixtral', provider: 'NousResearch', status: 'live', category: 'Text' },
-        { id: 'nous-hermes-2-yi-34b', name: 'Nous Hermes 2 Yi 34B', provider: 'NousResearch', status: 'live', category: 'Text' },
-        { id: 'dolphin-2.5-mixtral-8x7b', name: 'Dolphin 2.5 Mixtral', provider: 'Cognitive Computations', status: 'live', category: 'Text' },
-        { id: 'yi-34b-chat', name: 'Yi 34B Chat', provider: '01.AI', status: 'live', category: 'Text' },
-        { id: 'solar-10.7b-instruct', name: 'Solar 10.7B', provider: 'Upstage', status: 'live', category: 'Text' },
-        { id: 'openchat-3.5-0106', name: 'OpenChat 3.5', provider: 'OpenChat', status: 'live', category: 'Text' },
-        { id: 'toppy-m-7b', name: 'Toppy M 7B', provider: 'Undi95', status: 'live', category: 'Text' },
-        { id: 'openhermes-2.5-mistral-7b', name: 'OpenHermes 2.5', provider: 'Teknium', status: 'live', category: 'Text' },
-        { id: 'zephyr-7b-beta', name: 'Zephyr 7B Beta', provider: 'HuggingFace', status: 'beta', category: 'Text' },
-        { id: 'mythomax-l2-13b', name: 'MythoMax L2 13B', provider: 'Gryphe', status: 'live', category: 'Creative' },
-        { id: 'airoboros-l2-70b', name: 'Airoboros L2 70B', provider: 'Jondurbin', status: 'live', category: 'Large' },
-        { id: 'chronos-hermes-13b', name: 'Chronos Hermes 13B', provider: 'Austism', status: 'live', category: 'Text' },
-        { id: 'remm-slerp-l2-13b', name: 'ReMM SLERP L2 13B', provider: 'Undi95', status: 'live', category: 'Text' },
-        { id: 'weaver', name: 'Weaver', provider: 'Various', status: 'live', category: 'Creative' },
-        { id: 'goliath-120b', name: 'Goliath 120B', provider: 'Alpindale', status: 'live', category: 'Large' },
-        { id: 'alpaca-7b', name: 'Alpaca 7B', provider: 'Stanford', status: 'live', category: 'Text' },
-        { id: 'vicuna-7b', name: 'Vicuna 7B', provider: 'LMSYS', status: 'live', category: 'Text' },
-        { id: 'vicuna-13b', name: 'Vicuna 13B', provider: 'LMSYS', status: 'live', category: 'Text' },
-        { id: 'vicuna-33b', name: 'Vicuna 33B', provider: 'LMSYS', status: 'live', category: 'Text' },
-        { id: 'wizardlm-13b', name: 'WizardLM 13B', provider: 'WizardLM', status: 'live', category: 'Text' },
-        { id: 'wizardlm-30b', name: 'WizardLM 30B', provider: 'WizardLM', status: 'live', category: 'Text' },
-        { id: 'wizardlm-70b', name: 'WizardLM 70B', provider: 'WizardLM', status: 'live', category: 'Large' },
-        { id: 'manticore-13b', name: 'Manticore 13B', provider: 'Epoch', status: 'live', category: 'Text' },
-        { id: 'guanaco-33b', name: 'Guanaco 33B', provider: 'UW', status: 'live', category: 'Text' },
-        { id: 'guanaco-65b', name: 'Guanaco 65B', provider: 'UW', status: 'live', category: 'Large' }
-      ]
-    };
-  }
-}
-
-export const puterService = PuterService.getInstance();
+      {/* Voice Status */}
+      {isListening && (
+        <div className="absolute -top-16 sm:-top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-medium shadow-lg animate-fade-in border border-blue-400/30 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            Listening... Speak now or click to stop
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
