@@ -212,16 +212,16 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
       )}
 
       {/* Main Input Container */}
-      <div className={`flex items-end gap-2 p-2 bg-[#020105]/50 border border-[#FFFAFA]/20 shadow-lg backdrop-blur-sm ${attachedFiles.length > 0 ? 'rounded-b-xl border-t-0' : 'rounded-xl'}`}>
+      <div className={`flex items-end gap-2 sm:gap-3 p-3 sm:p-4 bg-[#020105]/50 border border-[#FFFAFA]/20 shadow-lg backdrop-blur-sm ${attachedFiles.length > 0 ? 'rounded-b-2xl border-t-0' : 'rounded-2xl'}`}>
         {/* Attach Files Button */}
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={() => fileInputRef.current?.click()}
-          className="shrink-0 w-8 h-8 rounded-full bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 border border-[#FFFAFA]/30 transition-all duration-200 p-0"
+          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 border border-[#FFFAFA]/30 transition-all duration-200 p-0"
           disabled={disabled}
         >
-          <Paperclip className="w-4 h-4 text-[#FFFAFA]/70" />
+          <Paperclip className="w-4 h-4 sm:w-5 sm:h-5 text-[#FFFAFA]/70" />
         </Button>
 
         {/* Message Input */}
@@ -232,23 +232,24 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
             placeholder={isListening ? "Listening... Speak now" : "Send a message..."}
-            className="min-h-[40px] max-h-[100px] resize-none pr-20 bg-transparent border-0 rounded-xl text-[#FFFAFA] placeholder:text-[#FFFAFA]/50 focus:ring-0 focus:outline-none transition-all duration-200 text-sm"
+            className="min-h-[44px] max-h-[120px] resize-none pr-24 sm:pr-32 bg-transparent border-0 rounded-2xl text-[#FFFAFA] placeholder:text-[#FFFAFA]/50 focus:ring-0 focus:outline-none transition-all duration-200 text-sm sm:text-base"
             disabled={disabled || isListening}
             rows={1}
           />
           
           {/* Mode Selector & Voice Button */}
-          <div className="absolute right-1 bottom-1 flex items-center gap-1">
+          <div className="absolute right-2 bottom-2 flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-6 px-2 rounded-full bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 text-xs font-medium transition-all duration-200 text-[#FFFAFA]"
+                  className="h-6 sm:h-8 px-2 sm:px-3 rounded-full bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 text-xs font-medium transition-all duration-200 text-[#FFFAFA]"
                   disabled={disabled}
                 >
                   {getModeIcon()}
-                  <ChevronDown className="w-3 h-3 ml-1 text-[#FFFAFA]/70" />
+                  <span className="ml-1 hidden sm:inline">{getModeLabel()}</span>
+                  <ChevronDown className="w-2 h-2 sm:w-3 sm:h-3 ml-1 text-[#FFFAFA]/70" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-[#020105]/95 text-[#FFFAFA] border border-[#FFFAFA]/30 z-50 rounded-xl backdrop-blur-md">
@@ -284,7 +285,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
             <Button 
               variant={isListening ? "default" : "ghost"}
               size="sm" 
-              className={`shrink-0 w-6 h-6 p-0 rounded-full transition-all duration-300 ${
+              className={`shrink-0 w-6 h-6 sm:w-8 sm:h-8 p-0 rounded-full transition-all duration-300 ${
                 isListening 
                   ? 'bg-blue-600 text-white animate-pulse shadow-lg border border-blue-400' 
                   : 'bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 border border-[#FFFAFA]/30'
@@ -292,7 +293,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
               onClick={handleVoiceToggle}
               disabled={disabled}
             >
-              {isListening ? <Volume2 className="w-4 h-4" /> : <Mic className="w-4 h-4 text-[#FFFAFA]/70" />}
+              {isListening ? <Volume2 className="w-3 h-3 sm:w-4 sm:h-4" /> : <Mic className="w-3 h-3 sm:w-4 sm:h-4 text-[#FFFAFA]/70" />}
             </Button>
           </div>
         </div>
@@ -302,9 +303,9 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
           onClick={handleSend} 
           disabled={(!message.trim() && attachedFiles.length === 0) || disabled}
           size="sm"
-          className="shrink-0 w-10 h-10 p-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 disabled:bg-[#FFFAFA]/20 disabled:text-[#FFFAFA]/40 transition-all duration-200 shadow-lg hover:shadow-xl border border-blue-400/30 hover:scale-105 active:scale-95"
+          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 disabled:bg-[#FFFAFA]/20 disabled:text-[#FFFAFA]/40 transition-all duration-200 shadow-lg hover:shadow-xl border border-blue-400/30"
         >
-          <Send className="w-5 h-5" />
+          <Send className="w-3 h-3 sm:w-4 sm:h-4" />
         </Button>
       </div>
 
@@ -320,7 +321,7 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
 
       {/* Voice Status */}
       {isListening && (
-        <div className="absolute -top-14 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-2 rounded-lg text-xs font-medium shadow-lg animate-fade-in border border-blue-400/30 backdrop-blur-sm">
+        <div className="absolute -top-16 sm:-top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-medium shadow-lg animate-fade-in border border-blue-400/30 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
             Listening... Speak now or click to stop

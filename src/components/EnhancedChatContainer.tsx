@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage } from './ChatMessage';
 import { TypingIndicator } from './TypingIndicator';
@@ -8,9 +10,16 @@ import { EnhancedChatInput } from './EnhancedChatInput';
 import { 
   Sparkles,
   MessageSquare,
+  Bot,
   Palette,
+  Wand2,
+  Image as ImageIcon,
   Brain,
   Code,
+  Calculator,
+  Eye,
+  Rocket,
+  Zap
 } from 'lucide-react';
 import { puterService } from '../lib/puterService';
 
@@ -22,7 +31,6 @@ interface Message {
   model?: string;
   type?: 'text' | 'image' | 'error';
   imageUrl?: string;
-  isStreaming?: boolean;
 }
 
 interface EnhancedChatContainerProps {
@@ -34,9 +42,9 @@ interface EnhancedChatContainerProps {
 export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o', onChatUpdate }: EnhancedChatContainerProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [currentModel, setCurrentModel] = useState(selectedModel);
   const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  const [modelCategories, setModelCategories] = useState<Record<string, Array<{ id: string; name: string; provider: string; status: string; category: string }>>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
@@ -45,6 +53,20 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o',
   useEffect(() => {
     setCurrentModel(selectedModel);
   }, [selectedModel]);
+
+  useEffect(() => {
+    // Load model categories from Puter service
+    const loadModels = async () => {
+      try {
+        await puterService.initialize();
+        const categories = puterService.getModelsByCategory();
+        setModelCategories(categories);
+      } catch (error) {
+        console.error('Failed to load models:', error);
+      }
+    };
+    loadModels();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -81,18 +103,6 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o',
 
     loadChatHistory();
   }, [currentChatId]);
-
-  // Check if model supports streaming
-  const supportsStreaming = (modelId: string): boolean => {
-    const streamingModels = [
-      'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'claude-3-5-sonnet-20241022',
-      'gemini-1.5-flash', 'gemini-1.5-pro', 'deepseek-chat', 'llama-3.1-70b-versatile',
-      'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma-7b-it', 'qwen2.5-72b-instruct',
-      'command-r-plus', 'grok-2-1212', 'grok-vision-beta'
-    ];
-    
-    return streamingModels.includes(modelId);
-  };
 
   const saveChatHistory = (updatedMessages: Message[]) => {
     if (!currentChatId) return;
@@ -134,7 +144,6 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o',
   const handleSendMessage = async (messageText: string, files?: File[], mode?: 'thinking' | 'search' | 'normal') => {
     if (!messageText.trim() || isLoading) return;
 
-    console.log('EnhancedChatContainer: Sending message:', messageText);
     const userMessage: Message = {
       id: Date.now().toString(),
       content: messageText.trim(),
@@ -147,86 +156,35 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o',
     setMessages(updatedMessages);
     setIsLoading(true);
 
-    // Create assistant message placeholder for streaming
-    const assistantMessageId = (Date.now() + 1).toString();
-    const assistantMessage: Message = {
-      id: assistantMessageId,
-      content: '',
-      sender: 'assistant',
-      timestamp: new Date(),
-      model: currentModel,
-      type: 'text',
-      isStreaming: true
-    };
-
     try {
-      if (supportsStreaming(currentModel)) {
-        console.log('Using streaming for model:', currentModel);
-        
-        // Add streaming message placeholder
-        const messagesWithPlaceholder = [...updatedMessages, assistantMessage];
-        setMessages(messagesWithPlaceholder);
-        setStreamingMessageId(assistantMessageId);
-        
-        let accumulatedContent = '';
-        
-        await puterService.chatStream(
-          userMessage.content,
-          {
-            model: currentModel,
-            max_tokens: 2000,
-            temperature: 0.7
-          },
-          (chunk: string) => {
-            accumulatedContent += chunk;
-            
-            // Update the streaming message
-            setMessages(prev => prev.map(msg => 
-              msg.id === assistantMessageId 
-                ? { ...msg, content: accumulatedContent, isStreaming: true }
-                : msg
-            ));
-          },
-          sessionId
-        );
-        
-        // Finalize the message
-        const finalMessages = messagesWithPlaceholder.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content: accumulatedContent, isStreaming: false }
-            : msg
-        );
-        
-        setMessages(finalMessages);
-        saveChatHistory(finalMessages);
-        setStreamingMessageId(null);
-      } else {
-        console.log('Using regular chat for model:', currentModel);
-        
-        const response = await puterService.chat(userMessage.content, {
-          model: currentModel,
-          max_tokens: 2000,
-          temperature: 0.7
-        }, sessionId);
-        
-        const finalAssistantMessage: Message = {
-          id: assistantMessageId,
-          content: response,
-          sender: 'assistant',
-          timestamp: new Date(),
-          model: currentModel,
-          type: 'text'
-        };
+      const response = await puterService.chat(userMessage.content, {
+        model: currentModel,
+        max_tokens: 2000,
+        temperature: 0.7,
+        memory: true
+      }, sessionId);
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: response,
+        sender: 'assistant',
+        timestamp: new Date(),
+        model: currentModel,
+        type: 'text'
+      };
 
-        const finalMessages = [...updatedMessages, finalAssistantMessage];
-        setMessages(finalMessages);
-        saveChatHistory(finalMessages);
-      }
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setMessages(finalMessages);
+      saveChatHistory(finalMessages);
+      toast({
+        title: "Message sent",
+        description: "Response received successfully",
+      });
     } catch (error) {
       console.error('Error sending message:', error);
       
       const errorMessage: Message = {
-        id: assistantMessageId,
+        id: (Date.now() + 1).toString(),
         content: `I apologize, but I'm having trouble connecting to the AI service right now. Please try again in a moment.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`,
         sender: 'assistant',
         timestamp: new Date(),
@@ -238,7 +196,11 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o',
       setMessages(finalMessages);
       saveChatHistory(finalMessages);
 
-      setStreamingMessageId(null);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -272,6 +234,10 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o',
       setMessages(updatedMessages);
       saveChatHistory(updatedMessages);
 
+      toast({
+        title: "Response regenerated",
+        description: "New response generated successfully",
+      });
     } catch (error) {
       console.error('Error regenerating response:', error);
       toast({
@@ -288,6 +254,32 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o',
     setMessages([]);
     if (currentChatId) {
       localStorage.removeItem(`chat-messages-${currentChatId}`);
+    }
+    toast({
+      title: "Chat cleared",
+      description: "All messages have been removed.",
+    });
+  };
+
+  const getModelBadgeColor = (status: string) => {
+    switch (status) {
+      case 'live': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'beta': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'error': return 'bg-red-500/20 text-red-400 border-red-500/30';
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Featured': return <Sparkles className="w-4 h-4 text-yellow-400" />;
+      case 'Reasoning': return <Brain className="w-4 h-4 text-purple-400" />;
+      case 'Code': return <Code className="w-4 h-4 text-blue-400" />;
+      case 'Math': return <Calculator className="w-4 h-4 text-green-400" />;
+      case 'Vision': return <Eye className="w-4 h-4 text-pink-400" />;
+      case 'Large': return <Rocket className="w-4 h-4 text-red-400" />;
+      case 'Fast': return <Zap className="w-4 h-4 text-orange-400" />;
+      default: return <Bot className="w-4 h-4 text-gray-400" />;
     }
   };
 
@@ -363,7 +355,6 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o',
                   isUser={message.sender === 'user'}
                   timestamp={message.timestamp}
                   model={message.model}
-                  isStreaming={message.isStreaming}
                   onRegenerate={() => handleRegenerateResponse(index)}
                   showRegenerate={message.sender === 'assistant' && index === messages.length - 1}
                 />

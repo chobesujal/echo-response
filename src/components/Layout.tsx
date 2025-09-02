@@ -109,16 +109,6 @@ export function Layout() {
         case 'Vision': return <Eye className="w-3 h-3 text-pink-400" />;
         case 'Large': return <Rocket className="w-3 h-3 text-red-400" />;
         case 'Fast': return <Zap className="w-3 h-3 text-orange-400" />;
-        case 'OpenAI': return <Cpu className="w-3 h-3 text-green-500" />;
-        case 'Anthropic': return <Brain className="w-3 h-3 text-orange-500" />;
-        case 'Google': return <Sparkles className="w-3 h-3 text-blue-500" />;
-        case 'DeepSeek': return <Zap className="w-3 h-3 text-purple-500" />;
-        case 'Meta': return <Rocket className="w-3 h-3 text-blue-600" />;
-        case 'Mistral': return <Code className="w-3 h-3 text-orange-600" />;
-        case 'Cohere': return <Eye className="w-3 h-3 text-green-600" />;
-        case 'xAI': return <Brain className="w-3 h-3 text-gray-400" />;
-        case 'Qwen': return <Calculator className="w-3 h-3 text-red-500" />;
-        case 'Community': return <Sparkles className="w-3 h-3 text-purple-600" />;
         default: return <Cpu className="w-3 h-3 text-gray-400" />;
       }
     };
@@ -133,13 +123,13 @@ export function Layout() {
 
     return (
       <Select value={selectedModel} onValueChange={onModelChange}>
-        <SelectTrigger className="w-48 h-8 bg-[#020105]/60 backdrop-blur-md border-[#FFFAFA]/20 text-[#FFFAFA] hover:bg-[#FFFAFA]/10 focus:ring-1 focus:ring-[#FFFAFA]/30 text-xs">
+        <SelectTrigger className="w-full bg-[#020105]/80 border-[#FFFAFA]/30 text-[#FFFAFA] hover:bg-[#FFFAFA]/10 focus:ring-2 focus:ring-[#FFFAFA]/30">
           <SelectValue placeholder="Select AI Model" />
         </SelectTrigger>
-        <SelectContent className="bg-[#020105]/95 border-[#FFFAFA]/20 backdrop-blur-md max-h-80 w-72">
+        <SelectContent className="bg-[#020105]/95 border-[#FFFAFA]/30 backdrop-blur-md max-h-96 w-80">
           {Object.entries(modelCategories).map(([category, models]) => (
             <div key={category}>
-              <div className="px-2 py-1.5 text-xs font-medium text-[#FFFAFA]/70 uppercase tracking-wide border-b border-[#FFFAFA]/10 flex items-center gap-2">
+              <div className="px-3 py-2 text-xs font-semibold text-[#FFFAFA]/60 uppercase tracking-wider border-b border-[#FFFAFA]/10 flex items-center gap-2">
                 {getCategoryIcon(category)}
                 {category}
               </div>
@@ -147,14 +137,14 @@ export function Layout() {
                 <SelectItem 
                   key={model.id} 
                   value={model.id}
-                  className="text-[#FFFAFA] hover:bg-[#FFFAFA]/10 focus:bg-[#FFFAFA]/10 cursor-pointer py-2"
+                  className="text-[#FFFAFA] hover:bg-[#FFFAFA]/10 focus:bg-[#FFFAFA]/10 cursor-pointer py-3"
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex flex-col">
-                      <span className="font-medium text-xs">{model.name}</span>
-                      <span className="text-xs text-[#FFFAFA]/50">{model.provider}</span>
+                      <span className="font-medium text-sm">{model.name}</span>
+                      <span className="text-xs text-[#FFFAFA]/60">{model.provider}</span>
                     </div>
-                    <Badge className={`ml-2 text-xs ${getModelBadgeColor(model.status)} px-1.5 py-0.5`}>
+                    <Badge className={`ml-3 text-xs ${getModelBadgeColor(model.status)} px-2 py-1`}>
                       {model.status}
                     </Badge>
                   </div>
@@ -203,12 +193,13 @@ export function Layout() {
               <SidebarTrigger className="h-8 w-8 rounded-full bg-muted/80 backdrop-blur-sm border border-border/30" />
             </div>
             
-            {/* Models Menu Container - Smaller and more transparent */}
-            <div className="flex items-center gap-2 bg-[#020105]/40 backdrop-blur-md border border-[#FFFAFA]/20 rounded-lg px-3 py-2 shadow-md">
-              <div className="w-4 h-4 rounded border border-[#FFFAFA]/20 bg-[#FFFAFA]/5 flex items-center justify-center">
-                <Cpu className="w-2.5 h-2.5 text-[#FFFAFA]/80" />
+            {/* Models Menu Container - Styled to match reference image */}
+            <div className="flex items-center gap-3 bg-[#020105]/95 backdrop-blur-md border border-[#FFFAFA]/30 rounded-xl px-4 py-3 shadow-lg">
+              <div className="w-6 h-6 rounded border border-[#FFFAFA]/30 bg-[#FFFAFA]/10 flex items-center justify-center">
+                <Cpu className="w-3 h-3 text-[#FFFAFA]" />
               </div>
-              <div className="relative">
+              <span className="text-sm font-medium text-[#FFFAFA] hidden sm:block">Model</span>
+              <div className="w-64 relative">
                 <ModelsMenu selectedModel={selectedModel} onModelChange={setSelectedModel} />
               </div>
             </div>
