@@ -266,10 +266,10 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
                   Search Mode
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
-                  window.open('/dalle', '_blank');
+                  window.open('https://cosmic-image.vercel.app', '_blank');
                 }} className="hover:bg-[#FFFAFA]/10 text-[#FFFAFA]">
                   <Palette className="w-4 h-4 mr-2 text-pink-400" />
-                  Generate Images
+                  Open DALL-E Studio
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
                   setMessage("Create a detailed explanation of ");
