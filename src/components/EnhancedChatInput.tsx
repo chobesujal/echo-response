@@ -156,11 +156,11 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
   const getModeIcon = () => {
     switch (mode) {
       case 'thinking':
-        return <Brain className="w-3 h-3 sm:w-4 sm:h-4" />;
+        return <Brain className="w-3 h-3" />;
       case 'search':
-        return <Search className="w-3 h-3 sm:w-4 sm:h-4" />;
+        return <Search className="w-3 h-3" />;
       default:
-        return <Brain className="w-3 h-3 sm:w-4 sm:h-4" />;
+        return <Brain className="w-3 h-3" />;
     }
   };
 
@@ -178,78 +178,78 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value);
     
-    // Auto-resize
+    // Auto-resize with smaller max height
     const textarea = e.target;
     textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    textarea.style.height = Math.min(textarea.scrollHeight, 80) + 'px'; // Reduced from 120px to 80px
   };
 
   const getFileIcon = (file: File) => {
     if (file.type.startsWith('image/')) {
-      return <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />;
+      return <ImageIcon className="w-3 h-3 text-blue-500 flex-shrink-0" />;
     }
-    return <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />;
+    return <FileText className="w-3 h-3 text-muted-foreground flex-shrink-0" />;
   };
 
   return (
     <div className="relative">
       {/* Attached Files */}
       {attachedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-3 bg-muted/20 rounded-t-2xl border border-border/30 mb-0">
+        <div className="flex flex-wrap gap-2 p-2 bg-muted/20 rounded-t-xl border border-border/30 mb-0">
           {attachedFiles.map((file, index) => (
-            <div key={index} className="flex items-center gap-2 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-xl text-xs sm:text-sm border border-border/30 shadow-sm">
+            <div key={index} className="flex items-center gap-2 bg-background/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs border border-border/30 shadow-sm">
               {getFileIcon(file)}
-              <span className="truncate max-w-32 sm:max-w-40 text-foreground font-medium">{file.name}</span>
+              <span className="truncate max-w-24 text-foreground font-medium">{file.name}</span>
               <button
                 onClick={() => removeFile(index)}
-                className="text-muted-foreground hover:text-foreground transition-colors ml-1 flex-shrink-0 hover:bg-muted/50 rounded-full p-1"
+                className="text-muted-foreground hover:text-foreground transition-colors ml-1 flex-shrink-0 hover:bg-muted/50 rounded-full p-0.5"
               >
-                <X className="w-3 h-3" />
+                <X className="w-2 h-2" />
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Main Input Container */}
-      <div className={`flex items-end gap-2 sm:gap-3 p-3 sm:p-4 bg-[#020105]/50 border border-[#FFFAFA]/20 shadow-lg backdrop-blur-sm ${attachedFiles.length > 0 ? 'rounded-b-2xl border-t-0' : 'rounded-2xl'}`}>
-        {/* Attach Files Button */}
+      {/* Compact Main Input Container */}
+      <div className={`flex items-center gap-2 p-2 bg-[#020105]/50 border border-[#FFFAFA]/20 shadow-lg backdrop-blur-sm ${attachedFiles.length > 0 ? 'rounded-b-xl border-t-0' : 'rounded-xl'}`}>
+        {/* Compact Attach Files Button */}
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={() => fileInputRef.current?.click()}
-          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 border border-[#FFFAFA]/30 transition-all duration-200 p-0"
+          className="shrink-0 w-7 h-7 rounded-lg bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 border border-[#FFFAFA]/30 transition-all duration-200 p-0"
           disabled={disabled}
         >
-          <Paperclip className="w-4 h-4 sm:w-5 sm:h-5 text-[#FFFAFA]/70" />
+          <Paperclip className="w-3 h-3 text-[#FFFAFA]/70" />
         </Button>
 
-        {/* Message Input */}
+        {/* Compact Message Input */}
         <div className="flex-1 relative">
           <Textarea
             ref={textareaRef}
             value={message}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder={isListening ? "Listening... Speak now" : "Send a message..."}
-            className="min-h-[44px] max-h-[120px] resize-none pr-24 sm:pr-32 bg-transparent border-0 rounded-2xl text-[#FFFAFA] placeholder:text-[#FFFAFA]/50 focus:ring-0 focus:outline-none transition-all duration-200 text-sm sm:text-base"
+            placeholder={isListening ? "Listening..." : "Send a message..."}
+            className="min-h-[36px] max-h-[80px] resize-none pr-20 bg-transparent border-0 rounded-lg text-[#FFFAFA] placeholder:text-[#FFFAFA]/50 focus:ring-0 focus:outline-none transition-all duration-200 text-sm py-2 px-3"
             disabled={disabled || isListening}
             rows={1}
           />
           
-          {/* Mode Selector & Voice Button */}
-          <div className="absolute right-2 bottom-2 flex items-center gap-1">
+          {/* Compact Mode Selector & Voice Button */}
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-6 sm:h-8 px-2 sm:px-3 rounded-full bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 text-xs font-medium transition-all duration-200 text-[#FFFAFA]"
+                  className="h-6 px-2 rounded-lg bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 text-xs font-medium transition-all duration-200 text-[#FFFAFA]"
                   disabled={disabled}
                 >
                   {getModeIcon()}
                   <span className="ml-1 hidden sm:inline">{getModeLabel()}</span>
-                  <ChevronDown className="w-2 h-2 sm:w-3 sm:h-3 ml-1 text-[#FFFAFA]/70" />
+                  <ChevronDown className="w-2 h-2 ml-1 text-[#FFFAFA]/70" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-[#020105]/95 text-[#FFFAFA] border border-[#FFFAFA]/30 z-50 rounded-xl backdrop-blur-md">
@@ -271,21 +271,14 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
                   <Palette className="w-4 h-4 mr-2 text-pink-400" />
                   Generate Images
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  setMessage("Create a detailed explanation of ");
-                  textareaRef.current?.focus();
-                }} className="hover:bg-[#FFFAFA]/10 text-[#FFFAFA]">
-                  <Brain className="w-4 h-4 mr-2 text-orange-400" />
-                  Detailed Explanation
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Voice Chat Button */}
+            {/* Compact Voice Chat Button */}
             <Button 
               variant={isListening ? "default" : "ghost"}
               size="sm" 
-              className={`shrink-0 w-6 h-6 sm:w-8 sm:h-8 p-0 rounded-full transition-all duration-300 ${
+              className={`shrink-0 w-6 h-6 p-0 rounded-lg transition-all duration-300 ${
                 isListening 
                   ? 'bg-blue-600 text-white animate-pulse shadow-lg border border-blue-400' 
                   : 'bg-[#FFFAFA]/10 hover:bg-[#FFFAFA]/20 border border-[#FFFAFA]/30'
@@ -293,19 +286,19 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
               onClick={handleVoiceToggle}
               disabled={disabled}
             >
-              {isListening ? <Volume2 className="w-3 h-3 sm:w-4 sm:h-4" /> : <Mic className="w-3 h-3 sm:w-4 sm:h-4 text-[#FFFAFA]/70" />}
+              {isListening ? <Volume2 className="w-3 h-3" /> : <Mic className="w-3 h-3 text-[#FFFAFA]/70" />}
             </Button>
           </div>
         </div>
 
-        {/* Send Button */}
+        {/* Enhanced Send Button */}
         <Button 
           onClick={handleSend} 
           disabled={(!message.trim() && attachedFiles.length === 0) || disabled}
           size="sm"
-          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 disabled:bg-[#FFFAFA]/20 disabled:text-[#FFFAFA]/40 transition-all duration-200 shadow-lg hover:shadow-xl border border-blue-400/30"
+          className="shrink-0 w-9 h-9 p-0 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 disabled:bg-[#FFFAFA]/20 disabled:text-[#FFFAFA]/40 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 border border-blue-400/30 disabled:hover:scale-100"
         >
-          <Send className="w-3 h-3 sm:w-4 sm:h-4" />
+          <Send className="w-4 h-4" />
         </Button>
       </div>
 
@@ -319,12 +312,12 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
         className="hidden"
       />
 
-      {/* Voice Status */}
+      {/* Compact Voice Status */}
       {isListening && (
-        <div className="absolute -top-16 sm:-top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-medium shadow-lg animate-fade-in border border-blue-400/30 backdrop-blur-sm">
+        <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 rounded-lg text-xs font-medium shadow-lg animate-fade-in border border-blue-400/30 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            Listening... Speak now or click to stop
+            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+            Listening...
           </div>
         </div>
       )}

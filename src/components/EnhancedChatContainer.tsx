@@ -156,43 +156,81 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'gpt-4o',
     setMessages(updatedMessages);
     setIsLoading(true);
 
-    try {
-      const response = await puterService.chat(userMessage.content, {
-        model: currentModel,
-        max_tokens: 2000,
-        temperature: 0.7,
-        memory: true
-      }, sessionId);
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response,
-        sender: 'assistant',
-        timestamp: new Date(),
-        model: currentModel,
-        type: 'text'
-      };
+    // Create assistant message for streaming
+    const assistantMessageId = (Date.now() + 1).toString();
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      content: '',
+      sender: 'assistant',
+      timestamp: new Date(),
+      model: currentModel,
+      type: 'text'
+    };
 
-      const finalMessages = [...updatedMessages, assistantMessage];
-      setMessages(finalMessages);
-      saveChatHistory(finalMessages);
-      toast({
-        title: "Message sent",
-        description: "Response received successfully",
-      });
+    const messagesWithAssistant = [...updatedMessages, assistantMessage];
+    setMessages(messagesWithAssistant);
+
+    try {
+      // Check if streaming is supported
+      const supportsStreaming = puterService.isStreamingSupported(currentModel);
+      
+      if (supportsStreaming) {
+        // Streaming response
+        let streamedContent = '';
+        
+        await puterService.chat(userMessage.content, {
+          model: currentModel,
+          max_tokens: 2000,
+          temperature: 0.7,
+          memory: true,
+          stream: true
+        }, sessionId, (chunk: string) => {
+          streamedContent += chunk;
+          
+          // Update the assistant message with streamed content
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: streamedContent }
+              : msg
+          ));
+        });
+        
+        // Final update with complete response
+        const finalMessages = messagesWithAssistant.map(msg => 
+          msg.id === assistantMessageId 
+            ? { ...msg, content: streamedContent }
+            : msg
+        );
+        setMessages(finalMessages);
+        saveChatHistory(finalMessages);
+      } else {
+        // Non-streaming response
+        const response = await puterService.chat(userMessage.content, {
+          model: currentModel,
+          max_tokens: 2000,
+          temperature: 0.7,
+          memory: true,
+          stream: false
+        }, sessionId);
+        
+        const finalMessages = messagesWithAssistant.map(msg => 
+          msg.id === assistantMessageId 
+            ? { ...msg, content: response }
+            : msg
+        );
+        setMessages(finalMessages);
+        saveChatHistory(finalMessages);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `I apologize, but I'm having trouble connecting to the AI service right now. Please try again in a moment.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        sender: 'assistant',
-        timestamp: new Date(),
-        model: currentModel,
-        type: 'error'
-      };
-
-      const finalMessages = [...updatedMessages, errorMessage];
+      const errorContent = `I apologize, but I'm having trouble connecting to the AI service right now. Please try again in a moment.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      
+      const finalMessages = messagesWithAssistant.map(msg => 
+        msg.id === assistantMessageId 
+          ? { ...msg, content: errorContent, type: 'error' as const }
+          : msg
+      );
       setMessages(finalMessages);
       saveChatHistory(finalMessages);
 

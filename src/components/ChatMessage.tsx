@@ -19,27 +19,71 @@ interface ChatMessageProps {
 }
 
 const modelDisplayNames: Record<string, string> = {
-  'deepseek-chat': 'DeepSeek Chat',
-  'deepseek-reasoner': 'DeepSeek Reasoner',
-  'claude-3-5-sonnet': 'Claude 3.5 Sonnet',
-  'claude-3-7-sonnet': 'Claude 3.7 Sonnet',
-  'claude-sonnet-4': 'Claude Sonnet 4',
-  'claude-opus-4': 'Claude Opus 4',
+  // GPT-5 Series
+  'gpt-5': 'GPT-5',
+  'gpt-5-mini': 'GPT-5 Mini',
+  'gpt-5-nano': 'GPT-5 Nano',
+  'gpt-5-chat-latest': 'GPT-5 Chat',
+  
+  // GPT-4 Series
   'gpt-4o': 'GPT-4o',
   'gpt-4o-mini': 'GPT-4o Mini',
-  'gpt-5-chat-latest': 'GPT-5 Chat',
-  'gpt-5-nano': 'GPT-5 Nano',
+  'gpt-4.1': 'GPT-4.1',
+  'gpt-4.1-mini': 'GPT-4.1 Mini',
   'gpt-4.1-nano': 'GPT-4.1 Nano',
+  
+  // o1 Series
   'o1': 'o1',
-  'o1-pro': 'o1-pro',
-  'gemini-1.5-flash': 'Gemini 1.5 Flash',
+  'o1-pro': 'o1 Pro',
+  'o1-mini': 'o1 Mini',
+  'o3': 'o3',
+  'o3-mini': 'o3 Mini',
+  'o4-mini': 'o4 Mini',
+  
+  // Claude 4 Series
+  'claude-opus-4': 'Claude 4 Opus',
+  'claude-opus-4-1': 'Claude 4.1 Opus',
+  'claude-sonnet-4': 'Claude 4 Sonnet',
+  'claude-3-7-sonnet-latest': 'Claude 3.7 Sonnet',
+  'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
+  
+  // DeepSeek Models
+  'deepseek-chat': 'DeepSeek Chat',
+  'deepseek-reasoner': 'DeepSeek Reasoner',
+  'deepseek-ai/DeepSeek-R1': 'DeepSeek R1',
+  'deepseek-ai/DeepSeek-V3.1': 'DeepSeek V3.1',
+  'deepseek-ai/DeepSeek-V3': 'DeepSeek V3',
+  
+  // Grok Models
+  'grok-3': 'Grok-3',
+  'grok-3-mini': 'Grok-3 Mini',
+  'grok-2': 'Grok-2',
+  'grok-beta': 'Grok Beta',
+  
+  // Gemini Models
   'gemini-2.0-flash': 'Gemini 2.0 Flash',
+  'gemini-1.5-flash': 'Gemini 1.5 Flash',
+  
+  // Meta Models
   'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo': 'Llama 3.1 405B',
+  'meta-llama/Llama-3.3-70B-Instruct-Turbo': 'Llama 3.3 70B',
   'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo': 'Llama 3.1 70B',
   'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo': 'Llama 3.1 8B',
+  
+  // Mistral Models
   'mistral-large-latest': 'Mistral Large',
+  'codestral-latest': 'Codestral',
   'pixtral-large-latest': 'Pixtral Large',
-  'codestral-latest': 'Codestral'
+  
+  // Qwen Models
+  'Qwen/Qwen3-235B-A22B-Instruct-2507-tput': 'Qwen 3 235B',
+  'Qwen/QwQ-32B': 'QwQ 32B',
+  'Qwen/Qwen2.5-72B-Instruct-Turbo': 'Qwen 2.5 72B',
+  
+  // Specialized Models
+  'cartesia/sonic': 'Cartesia Sonic',
+  'togethercomputer/MoA-1': 'Mixture of Agents',
+  'moonshotai/Kimi-K2-Instruct': 'Kimi K2'
 };
 
 export const ChatMessage = ({ message, isUser, timestamp, model, isStreaming, onRegenerate, showRegenerate }: ChatMessageProps) => {
