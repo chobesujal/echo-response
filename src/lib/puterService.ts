@@ -20,7 +20,6 @@ class PuterService {
     "openrouter:deepcogito/cogito-v2-preview-llama-109b-moe", "openrouter:x-ai/grok-4",
     "openrouter:anthropic/claude-opus-4.1", "openrouter:openai/gpt-5", "openrouter:openai/o3-pro",
     "openrouter:google/gemini-2.5-pro", "openrouter:mistralai/magistral-medium-2506",
-    "openrouter:deepseek/deepseek-r1", "openrouter:qwen/qwen3-235b-a22b"
   ];
 
   async initialize(): Promise<void> {
